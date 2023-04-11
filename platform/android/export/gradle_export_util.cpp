@@ -275,7 +275,8 @@ String _get_xr_features_tag(const Ref<EditorExportPreset> &p_preset, bool p_uses
 	}
 
 	if (p_uses_vulkan) {
-		manifest_xr_features += "    <uses-feature tools:node=\"replace\" android:name=\"android.hardware.vulkan.level\" android:required=\"true\" android:version=\"1\" />\n";
+		manifest_xr_features += "    <uses-feature tools:node=\"replace\" android:name=\"android.hardware.vulkan.level\" android:required=\"false\" android:version=\"1\" />\n";
+		manifest_xr_features += "    <uses-feature tools:node=\"replace\" android:name=\"android.hardware.vulkan.version\" android:required=\"true\" android:version=\"0x400003\" />\n";
 	}
 	return manifest_xr_features;
 }
@@ -305,6 +306,9 @@ String _get_activity_tag(const Ref<EditorExportPreset> &p_preset, bool p_uses_xr
 								  "                <!-- OpenXR category tag to indicate the activity starts in an immersive OpenXR mode. \n"
 								  "                See https://registry.khronos.org/OpenXR/specs/1.0/html/xrspec.html#android-runtime-category. -->\n"
 								  "                <category android:name=\"org.khronos.openxr.intent.category.IMMERSIVE_HMD\" />\n"
+								  "\n"
+								  "                <!-- Enable VR access on HTC Vive Focus devices. -->\n"
+								  "                <category android:name=\"com.htc.intent.category.VRAPP\" />\n"
 								  "            </intent-filter>\n";
 	} else {
 		manifest_activity_text += "            <intent-filter>\n"

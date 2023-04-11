@@ -30,6 +30,7 @@
 
 #include "navigation_agent_3d.h"
 
+#include "scene/3d/navigation_link_3d.h"
 #include "servers/navigation_server_3d.h"
 
 void NavigationAgent3D::_bind_methods() {
@@ -74,6 +75,12 @@ void NavigationAgent3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_navigation_layer_value", "layer_number", "value"), &NavigationAgent3D::set_navigation_layer_value);
 	ClassDB::bind_method(D_METHOD("get_navigation_layer_value", "layer_number"), &NavigationAgent3D::get_navigation_layer_value);
 
+	ClassDB::bind_method(D_METHOD("set_pathfinding_algorithm", "pathfinding_algorithm"), &NavigationAgent3D::set_pathfinding_algorithm);
+	ClassDB::bind_method(D_METHOD("get_pathfinding_algorithm"), &NavigationAgent3D::get_pathfinding_algorithm);
+
+	ClassDB::bind_method(D_METHOD("set_path_postprocessing", "path_postprocessing"), &NavigationAgent3D::set_path_postprocessing);
+	ClassDB::bind_method(D_METHOD("get_path_postprocessing"), &NavigationAgent3D::get_path_postprocessing);
+
 	ClassDB::bind_method(D_METHOD("set_path_metadata_flags", "flags"), &NavigationAgent3D::set_path_metadata_flags);
 	ClassDB::bind_method(D_METHOD("get_path_metadata_flags"), &NavigationAgent3D::get_path_metadata_flags);
 
@@ -98,20 +105,22 @@ void NavigationAgent3D::_bind_methods() {
 
 	ADD_GROUP("Pathfinding", "");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "target_position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_target_position", "get_target_position");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "path_desired_distance", PROPERTY_HINT_RANGE, "0.1,100,0.01,suffix:m"), "set_path_desired_distance", "get_path_desired_distance");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "target_desired_distance", PROPERTY_HINT_RANGE, "0.1,100,0.01,suffix:m"), "set_target_desired_distance", "get_target_desired_distance");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "agent_height_offset", PROPERTY_HINT_RANGE, "-100.0,100,0.01,suffix:m"), "set_agent_height_offset", "get_agent_height_offset");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "path_max_distance", PROPERTY_HINT_RANGE, "0.01,100,0.1,suffix:m"), "set_path_max_distance", "get_path_max_distance");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "path_desired_distance", PROPERTY_HINT_RANGE, "0.1,100,0.01,or_greater,suffix:m"), "set_path_desired_distance", "get_path_desired_distance");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "target_desired_distance", PROPERTY_HINT_RANGE, "0.1,100,0.01,or_greater,suffix:m"), "set_target_desired_distance", "get_target_desired_distance");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "agent_height_offset", PROPERTY_HINT_RANGE, "-100.0,100,0.01,or_greater,suffix:m"), "set_agent_height_offset", "get_agent_height_offset");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "path_max_distance", PROPERTY_HINT_RANGE, "0.01,100,0.1,or_greater,suffix:m"), "set_path_max_distance", "get_path_max_distance");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "navigation_layers", PROPERTY_HINT_LAYERS_3D_NAVIGATION), "set_navigation_layers", "get_navigation_layers");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathfinding_algorithm", PROPERTY_HINT_ENUM, "AStar"), "set_pathfinding_algorithm", "get_pathfinding_algorithm");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "path_postprocessing", PROPERTY_HINT_ENUM, "Corridorfunnel,Edgecentered"), "set_path_postprocessing", "get_path_postprocessing");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "path_metadata_flags", PROPERTY_HINT_FLAGS, "Include Types,Include RIDs,Include Owners"), "set_path_metadata_flags", "get_path_metadata_flags");
 
 	ADD_GROUP("Avoidance", "");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "avoidance_enabled"), "set_avoidance_enabled", "get_avoidance_enabled");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "radius", PROPERTY_HINT_RANGE, "0.1,100,0.01,suffix:m"), "set_radius", "get_radius");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "neighbor_distance", PROPERTY_HINT_RANGE, "0.1,10000,0.01,suffix:m"), "set_neighbor_distance", "get_neighbor_distance");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "max_neighbors", PROPERTY_HINT_RANGE, "1,10000,1"), "set_max_neighbors", "get_max_neighbors");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "time_horizon", PROPERTY_HINT_RANGE, "0.01,100,0.01,suffix:s"), "set_time_horizon", "get_time_horizon");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_speed", PROPERTY_HINT_RANGE, "0.1,10000,0.01,suffix:m/s"), "set_max_speed", "get_max_speed");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "radius", PROPERTY_HINT_RANGE, "0.1,100,0.01,or_greater,suffix:m"), "set_radius", "get_radius");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "neighbor_distance", PROPERTY_HINT_RANGE, "0.1,10000,0.01,or_greater,suffix:m"), "set_neighbor_distance", "get_neighbor_distance");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "max_neighbors", PROPERTY_HINT_RANGE, "1,10000,1,or_greater"), "set_max_neighbors", "get_max_neighbors");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "time_horizon", PROPERTY_HINT_RANGE, "0.01,10,0.01,or_greater,suffix:s"), "set_time_horizon", "get_time_horizon");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_speed", PROPERTY_HINT_RANGE, "0.1,1000,0.01,or_greater,suffix:m/s"), "set_max_speed", "get_max_speed");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "ignore_y"), "set_ignore_y", "get_ignore_y");
 
 	ADD_SIGNAL(MethodInfo("path_changed"));
@@ -134,7 +143,7 @@ void NavigationAgent3D::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "debug_enabled"), "set_debug_enabled", "get_debug_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "debug_use_custom"), "set_debug_use_custom", "get_debug_use_custom");
 	ADD_PROPERTY(PropertyInfo(Variant::COLOR, "debug_path_custom_color"), "set_debug_path_custom_color", "get_debug_path_custom_color");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "debug_path_custom_point_size", PROPERTY_HINT_RANGE, "1,50,1,suffix:px"), "set_debug_path_custom_point_size", "get_debug_path_custom_point_size");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "debug_path_custom_point_size", PROPERTY_HINT_RANGE, "0,50,0.01,or_greater,suffix:px"), "set_debug_path_custom_point_size", "get_debug_path_custom_point_size");
 }
 
 void NavigationAgent3D::_notification(int p_what) {
@@ -332,6 +341,26 @@ bool NavigationAgent3D::get_navigation_layer_value(int p_layer_number) const {
 	ERR_FAIL_COND_V_MSG(p_layer_number < 1, false, "Navigation layer number must be between 1 and 32 inclusive.");
 	ERR_FAIL_COND_V_MSG(p_layer_number > 32, false, "Navigation layer number must be between 1 and 32 inclusive.");
 	return get_navigation_layers() & (1 << (p_layer_number - 1));
+}
+
+void NavigationAgent3D::set_pathfinding_algorithm(const NavigationPathQueryParameters3D::PathfindingAlgorithm p_pathfinding_algorithm) {
+	if (pathfinding_algorithm == p_pathfinding_algorithm) {
+		return;
+	}
+
+	pathfinding_algorithm = p_pathfinding_algorithm;
+
+	navigation_query->set_pathfinding_algorithm(pathfinding_algorithm);
+}
+
+void NavigationAgent3D::set_path_postprocessing(const NavigationPathQueryParameters3D::PathPostProcessing p_path_postprocessing) {
+	if (path_postprocessing == p_path_postprocessing) {
+		return;
+	}
+
+	path_postprocessing = p_path_postprocessing;
+
+	navigation_query->set_path_postprocessing(path_postprocessing);
 }
 
 void NavigationAgent3D::set_path_metadata_flags(BitField<NavigationPathQueryParameters3D::PathMetadataFlags> p_path_metadata_flags) {
@@ -649,6 +678,21 @@ void NavigationAgent3D::update_navigation() {
 				}
 
 				details[SNAME("owner")] = owner;
+
+				if (waypoint_type == NavigationPathQueryResult3D::PATH_SEGMENT_TYPE_LINK) {
+					const NavigationLink3D *navlink = Object::cast_to<NavigationLink3D>(owner);
+					if (navlink) {
+						Vector3 link_global_start_position = navlink->get_global_start_position();
+						Vector3 link_global_end_position = navlink->get_global_end_position();
+						if (waypoint.distance_to(link_global_start_position) < waypoint.distance_to(link_global_end_position)) {
+							details[SNAME("link_entry_position")] = link_global_start_position;
+							details[SNAME("link_exit_position")] = link_global_end_position;
+						} else {
+							details[SNAME("link_entry_position")] = link_global_end_position;
+							details[SNAME("link_exit_position")] = link_global_start_position;
+						}
+					}
+				}
 			}
 
 			// Emit a signal for the waypoint
@@ -744,7 +788,7 @@ void NavigationAgent3D::set_debug_path_custom_point_size(float p_point_size) {
 		return;
 	}
 
-	debug_path_custom_point_size = p_point_size;
+	debug_path_custom_point_size = MAX(0.0, p_point_size);
 	debug_path_dirty = true;
 #endif // DEBUG_ENABLED
 }
@@ -812,28 +856,30 @@ void NavigationAgent3D::_update_debug_path() {
 		debug_path_mesh->surface_set_material(0, debug_agent_path_line_material);
 	}
 
-	Vector<Vector3> debug_path_points_vertex_array;
+	if (debug_path_custom_point_size > 0.0) {
+		Vector<Vector3> debug_path_points_vertex_array;
 
-	for (int i = 0; i < navigation_path.size(); i++) {
-		debug_path_points_vertex_array.push_back(navigation_path[i]);
-	}
-
-	Array debug_path_points_mesh_array;
-	debug_path_points_mesh_array.resize(Mesh::ARRAY_MAX);
-	debug_path_points_mesh_array[Mesh::ARRAY_VERTEX] = debug_path_lines_vertex_array;
-
-	debug_path_mesh->add_surface_from_arrays(Mesh::PRIMITIVE_POINTS, debug_path_points_mesh_array);
-
-	Ref<StandardMaterial3D> debug_agent_path_point_material = NavigationServer3D::get_singleton()->get_debug_navigation_agent_path_point_material();
-	if (debug_use_custom) {
-		if (!debug_agent_path_point_custom_material.is_valid()) {
-			debug_agent_path_point_custom_material = debug_agent_path_point_material->duplicate();
+		for (int i = 0; i < navigation_path.size(); i++) {
+			debug_path_points_vertex_array.push_back(navigation_path[i]);
 		}
-		debug_agent_path_point_custom_material->set_albedo(debug_path_custom_color);
-		debug_agent_path_point_custom_material->set_point_size(debug_path_custom_point_size);
-		debug_path_mesh->surface_set_material(1, debug_agent_path_point_custom_material);
-	} else {
-		debug_path_mesh->surface_set_material(1, debug_agent_path_point_material);
+
+		Array debug_path_points_mesh_array;
+		debug_path_points_mesh_array.resize(Mesh::ARRAY_MAX);
+		debug_path_points_mesh_array[Mesh::ARRAY_VERTEX] = debug_path_points_vertex_array;
+
+		debug_path_mesh->add_surface_from_arrays(Mesh::PRIMITIVE_POINTS, debug_path_points_mesh_array);
+
+		Ref<StandardMaterial3D> debug_agent_path_point_material = NavigationServer3D::get_singleton()->get_debug_navigation_agent_path_point_material();
+		if (debug_use_custom) {
+			if (!debug_agent_path_point_custom_material.is_valid()) {
+				debug_agent_path_point_custom_material = debug_agent_path_point_material->duplicate();
+			}
+			debug_agent_path_point_custom_material->set_albedo(debug_path_custom_color);
+			debug_agent_path_point_custom_material->set_point_size(debug_path_custom_point_size);
+			debug_path_mesh->surface_set_material(1, debug_agent_path_point_custom_material);
+		} else {
+			debug_path_mesh->surface_set_material(1, debug_agent_path_point_material);
+		}
 	}
 
 	RS::get_singleton()->instance_set_base(debug_path_instance, debug_path_mesh->get_rid());

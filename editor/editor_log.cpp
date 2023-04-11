@@ -91,7 +91,12 @@ void EditorLog::_update_theme() {
 		log->add_theme_font_override("mono_font", mono_font);
 	}
 
-	log->add_theme_font_size_override("normal_font_size", get_theme_font_size(SNAME("output_source_size"), SNAME("EditorFonts")));
+	const int font_size = get_theme_font_size(SNAME("output_source_size"), SNAME("EditorFonts"));
+	log->add_theme_font_size_override("normal_font_size", font_size);
+	log->add_theme_font_size_override("bold_font_size", font_size);
+	log->add_theme_font_size_override("italics_font_size", font_size);
+	log->add_theme_font_size_override("mono_font_size", font_size);
+
 	log->add_theme_color_override("selection_color", get_theme_color(SNAME("accent_color"), SNAME("Editor")) * Color(1, 1, 1, 0.4));
 
 	type_filter_map[MSG_TYPE_STD]->toggle_button->set_icon(get_theme_icon(SNAME("Popup"), SNAME("EditorIcons")));
@@ -380,6 +385,7 @@ EditorLog::EditorLog() {
 	log->set_use_bbcode(true);
 	log->set_scroll_follow(true);
 	log->set_selection_enabled(true);
+	log->set_context_menu_enabled(true);
 	log->set_focus_mode(FOCUS_CLICK);
 	log->set_v_size_flags(SIZE_EXPAND_FILL);
 	log->set_h_size_flags(SIZE_EXPAND_FILL);

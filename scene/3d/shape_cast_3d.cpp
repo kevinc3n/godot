@@ -331,16 +331,14 @@ void ShapeCast3D::set_shape(const Ref<Shape3D> &p_shape) {
 	if (p_shape == shape) {
 		return;
 	}
-	if (!shape.is_null()) {
+	if (shape.is_valid()) {
 		shape->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &ShapeCast3D::_shape_changed));
 		shape->unregister_owner(this);
 	}
 	shape = p_shape;
-	if (!shape.is_null()) {
+	if (shape.is_valid()) {
 		shape->register_owner(this);
 		shape->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &ShapeCast3D::_shape_changed));
-	}
-	if (p_shape.is_valid()) {
 		shape_rid = shape->get_rid();
 	}
 
@@ -437,26 +435,18 @@ void ShapeCast3D::add_exception_rid(const RID &p_rid) {
 	exclude.insert(p_rid);
 }
 
-void ShapeCast3D::add_exception(const Object *p_object) {
-	ERR_FAIL_NULL(p_object);
-	const CollisionObject3D *co = Object::cast_to<CollisionObject3D>(p_object);
-	if (!co) {
-		return;
-	}
-	add_exception_rid(co->get_rid());
+void ShapeCast3D::add_exception(const CollisionObject3D *p_node) {
+	ERR_FAIL_NULL_MSG(p_node, "The passed Node must be an instance of CollisionObject3D.");
+	add_exception_rid(p_node->get_rid());
 }
 
 void ShapeCast3D::remove_exception_rid(const RID &p_rid) {
 	exclude.erase(p_rid);
 }
 
-void ShapeCast3D::remove_exception(const Object *p_object) {
-	ERR_FAIL_NULL(p_object);
-	const CollisionObject3D *co = Object::cast_to<CollisionObject3D>(p_object);
-	if (!co) {
-		return;
-	}
-	remove_exception_rid(co->get_rid());
+void ShapeCast3D::remove_exception(const CollisionObject3D *p_node) {
+	ERR_FAIL_NULL_MSG(p_node, "The passed Node must be an instance of CollisionObject3D.");
+	remove_exception_rid(p_node->get_rid());
 }
 
 void ShapeCast3D::clear_exceptions() {

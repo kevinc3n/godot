@@ -1225,8 +1225,13 @@ void ScriptTextEditor::_edit_option(int p_op) {
 			code_editor->duplicate_selection();
 		} break;
 		case EDIT_TOGGLE_FOLD_LINE: {
-			for (int caret_idx = 0; caret_idx < tx->get_caret_count(); caret_idx++) {
-				tx->toggle_foldable_line(tx->get_caret_line(caret_idx));
+			int previous_line = -1;
+			for (int caret_idx : tx->get_caret_index_edit_order()) {
+				int line_idx = tx->get_caret_line(caret_idx);
+				if (line_idx != previous_line) {
+					tx->toggle_foldable_line(line_idx);
+					previous_line = line_idx;
+				}
 			}
 			tx->queue_redraw();
 		} break;
@@ -1362,11 +1367,36 @@ void ScriptTextEditor::_edit_option(int p_op) {
 			code_editor->remove_all_bookmarks();
 		} break;
 		case DEBUG_TOGGLE_BREAKPOINT: {
-			for (int caret_idx = 0; caret_idx < tx->get_caret_count(); caret_idx++) {
-				int line = tx->get_caret_line(caret_idx);
-				bool dobreak = !tx->is_line_breakpointed(line);
-				tx->set_line_as_breakpoint(line, dobreak);
-				EditorDebuggerNode::get_singleton()->set_breakpoint(script->get_path(), line + 1, dobreak);
+			Vector<int> caret_edit_order = tx->get_caret_index_edit_order();
+			caret_edit_order.reverse();
+			int last_line = -1;
+			for (const int &c : caret_edit_order) {
+				int from = tx->has_selection(c) ? tx->get_selection_from_line(c) : tx->get_caret_line(c);
+				from += from == last_line ? 1 : 0;
+				int to = tx->has_selection(c) ? tx->get_selection_to_line(c) : tx->get_caret_line(c);
+				if (to < from) {
+					continue;
+				}
+				// Check first if there's any lines with breakpoints in the selection.
+				bool selection_has_breakpoints = false;
+				for (int line = from; line <= to; line++) {
+					if (tx->is_line_breakpointed(line)) {
+						selection_has_breakpoints = true;
+						break;
+					}
+				}
+
+				// Set breakpoint on caret or remove all bookmarks from the selection.
+				if (!selection_has_breakpoints) {
+					if (tx->get_caret_line(c) != last_line) {
+						tx->set_line_as_breakpoint(tx->get_caret_line(c), true);
+					}
+				} else {
+					for (int line = from; line <= to; line++) {
+						tx->set_line_as_breakpoint(line, false);
+					}
+				}
+				last_line = to;
 			}
 		} break;
 		case DEBUG_REMOVE_ALL_BREAKPOINTS: {
@@ -2144,6 +2174,7 @@ ScriptTextEditor::ScriptTextEditor() {
 	warnings_panel->set_h_size_flags(SIZE_EXPAND_FILL);
 	warnings_panel->set_meta_underline(true);
 	warnings_panel->set_selection_enabled(true);
+	warnings_panel->set_context_menu_enabled(true);
 	warnings_panel->set_focus_mode(FOCUS_CLICK);
 	warnings_panel->hide();
 
@@ -2152,6 +2183,7 @@ ScriptTextEditor::ScriptTextEditor() {
 	errors_panel->set_h_size_flags(SIZE_EXPAND_FILL);
 	errors_panel->set_meta_underline(true);
 	errors_panel->set_selection_enabled(true);
+	errors_panel->set_context_menu_enabled(true);
 	errors_panel->set_focus_mode(FOCUS_CLICK);
 	errors_panel->hide();
 
@@ -2245,6 +2277,7 @@ void ScriptTextEditor::register_editor() {
 	ED_SHORTCUT("script_text_editor/unindent", TTR("Unindent"), KeyModifierMask::SHIFT | Key::TAB);
 	ED_SHORTCUT("script_text_editor/toggle_comment", TTR("Toggle Comment"), KeyModifierMask::CMD_OR_CTRL | Key::K);
 	ED_SHORTCUT("script_text_editor/toggle_fold_line", TTR("Fold/Unfold Line"), KeyModifierMask::ALT | Key::F);
+	ED_SHORTCUT_OVERRIDE("script_text_editor/toggle_fold_line", "macos", KeyModifierMask::CTRL | KeyModifierMask::META | Key::F);
 	ED_SHORTCUT("script_text_editor/fold_all_lines", TTR("Fold All Lines"), Key::NONE);
 	ED_SHORTCUT("script_text_editor/unfold_all_lines", TTR("Unfold All Lines"), Key::NONE);
 	ED_SHORTCUT("script_text_editor/duplicate_selection", TTR("Duplicate Selection"), KeyModifierMask::SHIFT | KeyModifierMask::CTRL | Key::D);

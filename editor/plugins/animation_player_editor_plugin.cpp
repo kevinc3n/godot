@@ -1134,6 +1134,7 @@ void AnimationPlayerEditor::_animation_duplicate() {
 
 	name_dialog_op = TOOL_DUPLICATE_ANIM;
 	name_dialog->set_title(TTR("Duplicate Animation"));
+	// TRANSLATORS: This is a label for the new name field in the "Duplicate Animation" dialog.
 	name_title->set_text(TTR("Duplicated Animation Name:"));
 	name->set_text(new_name);
 	name_dialog->popup_centered(Size2(300, 90));
@@ -1748,6 +1749,7 @@ AnimationPlayerEditor::AnimationPlayerEditor(AnimationPlayerEditorPlugin *p_plug
 	animation->set_h_size_flags(SIZE_EXPAND_FILL);
 	animation->set_tooltip_text(TTR("Display list of animations in player."));
 	animation->set_clip_text(true);
+	animation->set_auto_translate(false);
 
 	autoplay = memnew(Button);
 	autoplay->set_flat(true);
@@ -1847,6 +1849,7 @@ AnimationPlayerEditor::AnimationPlayerEditor(AnimationPlayerEditorPlugin *p_plug
 	blend_editor.tree->set_columns(2);
 	blend_vb->add_margin_child(TTR("Blend Times:"), blend_editor.tree, true);
 	blend_editor.next = memnew(OptionButton);
+	blend_editor.next->set_auto_translate(false);
 	blend_vb->add_margin_child(TTR("Next (Auto Queue):"), blend_editor.next);
 	blend_editor.dialog->set_title(TTR("Cross-Animation Blend Times"));
 	updating_blends = false;

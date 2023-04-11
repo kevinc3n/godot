@@ -943,8 +943,8 @@ void ProjectExportDialog::_export_pck_zip_selected(const String &p_path) {
 }
 
 void ProjectExportDialog::_open_export_template_manager() {
-	EditorNode::get_singleton()->open_export_template_manager();
 	hide();
+	EditorNode::get_singleton()->open_export_template_manager();
 }
 
 void ProjectExportDialog::_validate_export_path(const String &p_path) {
@@ -1078,6 +1078,7 @@ void ProjectExportDialog::_bind_methods() {
 
 ProjectExportDialog::ProjectExportDialog() {
 	set_title(TTR("Export"));
+	set_clamp_to_embedder(true);
 
 	VBoxContainer *main_vb = memnew(VBoxContainer);
 	main_vb->connect("theme_changed", callable_mp(this, &ProjectExportDialog::_theme_changed));

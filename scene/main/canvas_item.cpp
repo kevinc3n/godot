@@ -188,10 +188,13 @@ void CanvasItem::_enter_canvas() {
 	// Resolves to nullptr if the node is top_level.
 	CanvasItem *parent_item = get_parent_item();
 
+	if (get_parent()) {
+		get_viewport()->canvas_parent_mark_dirty(get_parent());
+	}
+
 	if (parent_item) {
 		canvas_layer = parent_item->canvas_layer;
 		RenderingServer::get_singleton()->canvas_item_set_parent(canvas_item, parent_item->get_canvas_item());
-		RenderingServer::get_singleton()->canvas_item_set_draw_index(canvas_item, get_index());
 		RenderingServer::get_singleton()->canvas_item_set_visibility_layer(canvas_item, visibility_layer);
 	} else {
 		Node *n = this;
@@ -227,8 +230,6 @@ void CanvasItem::_enter_canvas() {
 		} else {
 			get_viewport()->gui_reset_canvas_sort_index();
 		}
-
-		get_tree()->call_group_flags(SceneTree::GROUP_CALL_UNIQUE | SceneTree::GROUP_CALL_DEFERRED, canvas_group, SNAME("_top_level_raise_self"));
 	}
 
 	pending_update = false;
@@ -289,11 +290,12 @@ void CanvasItem::_notification(int p_what) {
 				}
 			}
 
+			_enter_canvas();
+
 			RenderingServer::get_singleton()->canvas_item_set_visible(canvas_item, is_visible_in_tree()); // The visibility of the parent may change.
 			if (is_visible_in_tree()) {
 				notification(NOTIFICATION_VISIBILITY_CHANGED); // Considered invisible until entered.
 			}
-			_enter_canvas();
 
 			_update_texture_filter_changed(false);
 			_update_texture_repeat_changed(false);
@@ -301,21 +303,12 @@ void CanvasItem::_notification(int p_what) {
 			if (!block_transform_notify && !xform_change.in_list()) {
 				get_tree()->xform_change_list.add(&xform_change);
 			}
-		} break;
 
-		case NOTIFICATION_MOVED_IN_PARENT: {
-			if (!is_inside_tree()) {
-				break;
+			if (get_viewport()) {
+				get_parent()->connect(SNAME("child_order_changed"), callable_mp(get_viewport(), &Viewport::canvas_parent_mark_dirty).bind(get_parent()), CONNECT_REFERENCE_COUNTED);
 			}
 
-			if (canvas_group != StringName()) {
-				get_tree()->call_group_flags(SceneTree::GROUP_CALL_UNIQUE | SceneTree::GROUP_CALL_DEFERRED, canvas_group, "_top_level_raise_self");
-			} else {
-				ERR_FAIL_COND_MSG(!get_parent_item(), "Moved child is in incorrect state (no canvas group, no canvas item parent).");
-				RenderingServer::get_singleton()->canvas_item_set_draw_index(canvas_item, get_index());
-			}
 		} break;
-
 		case NOTIFICATION_EXIT_TREE: {
 			if (xform_change.in_list()) {
 				get_tree()->xform_change_list.remove(&xform_change);
@@ -331,11 +324,28 @@ void CanvasItem::_notification(int p_what) {
 			}
 			global_invalid = true;
 			parent_visible_in_tree = false;
+
+			if (get_viewport()) {
+				get_parent()->disconnect(SNAME("child_order_changed"), callable_mp(get_viewport(), &Viewport::canvas_parent_mark_dirty).bind(get_parent()));
+			}
 		} break;
 
 		case NOTIFICATION_VISIBILITY_CHANGED: {
 			emit_signal(SceneStringNames::get_singleton()->visibility_changed);
 		} break;
+	}
+}
+
+void CanvasItem::update_draw_order() {
+	if (!is_inside_tree()) {
+		return;
+	}
+
+	if (canvas_group != StringName()) {
+		get_tree()->call_group_flags(SceneTree::GROUP_CALL_UNIQUE | SceneTree::GROUP_CALL_DEFERRED, canvas_group, "_top_level_raise_self");
+	} else {
+		ERR_FAIL_COND_MSG(!get_parent_item(), "Moved child is in incorrect state (no canvas group, no canvas item parent).");
+		RenderingServer::get_singleton()->canvas_item_set_draw_index(canvas_item, get_index());
 	}
 }
 
@@ -513,14 +523,16 @@ bool CanvasItem::is_y_sort_enabled() const {
 
 void CanvasItem::draw_dashed_line(const Point2 &p_from, const Point2 &p_to, const Color &p_color, real_t p_width, real_t p_dash, bool p_aligned) {
 	ERR_FAIL_COND_MSG(!drawing, "Drawing is only allowed inside NOTIFICATION_DRAW, _draw() function or 'draw' signal.");
+	ERR_FAIL_COND(p_dash <= 0.0);
 
 	float length = (p_to - p_from).length();
-	if (length < p_dash) {
+	Vector2 step = p_dash * (p_to - p_from).normalized();
+
+	if (length < p_dash || step == Vector2()) {
 		RenderingServer::get_singleton()->canvas_item_add_line(canvas_item, p_from, p_to, p_color, p_width);
 		return;
 	}
 
-	Vector2 step = p_dash * (p_to - p_from).normalized();
 	int steps = (p_aligned) ? Math::ceil(length / p_dash) : Math::floor(length / p_dash);
 	if (steps % 2 == 0) {
 		steps--;

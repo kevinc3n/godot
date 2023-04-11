@@ -712,14 +712,14 @@ void GDScriptParser::parse_extends() {
 	if (!consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected superclass name after "extends".)")) {
 		return;
 	}
-	current_class->extends.push_back(previous.literal);
+	current_class->extends.push_back(parse_identifier());
 
 	while (match(GDScriptTokenizer::Token::PERIOD)) {
 		make_completion_context(COMPLETION_INHERIT_TYPE, current_class, chain_index++);
 		if (!consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected superclass name after ".".)")) {
 			return;
 		}
-		current_class->extends.push_back(previous.literal);
+		current_class->extends.push_back(parse_identifier());
 	}
 }
 
@@ -1343,7 +1343,7 @@ void GDScriptParser::parse_function_signature(FunctionNode *p_function, SuiteNod
 				default_used = true;
 			} else {
 				if (default_used) {
-					push_error("Cannot have a mandatory parameters after optional parameters.");
+					push_error("Cannot have mandatory parameters after optional parameters.");
 					continue;
 				}
 			}
@@ -1475,7 +1475,7 @@ GDScriptParser::AnnotationNode *GDScriptParser::parse_annotation(uint32_t p_vali
 
 void GDScriptParser::clear_unused_annotations() {
 	for (const AnnotationNode *annotation : annotation_stack) {
-		push_error(vformat(R"(Annotation "%s" does not precedes a valid target, so it will have no effect.)", annotation->name), annotation);
+		push_error(vformat(R"(Annotation "%s" does not precede a valid target, so it will have no effect.)", annotation->name), annotation);
 	}
 
 	annotation_stack.clear();
@@ -1521,7 +1521,7 @@ GDScriptParser::SuiteNode *GDScriptParser::parse_suite(const String &p_context, 
 	int error_count = 0;
 
 	do {
-		if (!multiline && previous.type == GDScriptTokenizer::Token::SEMICOLON && check(GDScriptTokenizer::Token::NEWLINE)) {
+		if (is_at_end() || (!multiline && previous.type == GDScriptTokenizer::Token::SEMICOLON && check(GDScriptTokenizer::Token::NEWLINE))) {
 			break;
 		}
 		Node *statement = parse_statement();
@@ -1817,7 +1817,7 @@ GDScriptParser::ForNode *GDScriptParser::parse_for() {
 	n_for->list = parse_expression(false);
 
 	if (!n_for->list) {
-		push_error(R"(Expected a list or range after "in".)");
+		push_error(R"(Expected iterable after "in".)");
 	}
 
 	consume(GDScriptTokenizer::Token::COLON, R"(Expected ":" after "for" condition.)");
@@ -2462,9 +2462,6 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_binary_operator(Expression
 		case GDScriptTokenizer::Token::PIPE_PIPE:
 			operation->operation = BinaryOpNode::OP_LOGIC_OR;
 			operation->variant_op = Variant::OP_OR;
-			break;
-		case GDScriptTokenizer::Token::IS:
-			operation->operation = BinaryOpNode::OP_TYPE_TEST;
 			break;
 		case GDScriptTokenizer::Token::IN:
 			operation->operation = BinaryOpNode::OP_CONTENT_TEST;
@@ -3141,6 +3138,14 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_lambda(ExpressionNode *p_p
 	bool previous_in_lambda = in_lambda;
 	in_lambda = true;
 
+	// Save break/continue state.
+	bool could_break = can_break;
+	bool could_continue = can_continue;
+
+	// Disallow break/continue.
+	can_break = false;
+	can_continue = false;
+
 	function->body = parse_suite("lambda declaration", body, true);
 	complete_extents(function);
 	complete_extents(lambda);
@@ -3158,7 +3163,28 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_lambda(ExpressionNode *p_p
 	current_function = previous_function;
 	in_lambda = previous_in_lambda;
 	lambda->function = function;
+
+	// Reset break/continue state.
+	can_break = could_break;
+	can_continue = could_continue;
+
 	return lambda;
+}
+
+GDScriptParser::ExpressionNode *GDScriptParser::parse_type_test(ExpressionNode *p_previous_operand, bool p_can_assign) {
+	TypeTestNode *type_test = alloc_node<TypeTestNode>();
+	reset_extents(type_test, p_previous_operand);
+	update_extents(type_test);
+
+	type_test->operand = p_previous_operand;
+	type_test->test_type = parse_type();
+	complete_extents(type_test);
+
+	if (type_test->test_type == nullptr) {
+		push_error(R"(Expected type specifier after "is".)");
+	}
+
+	return type_test;
 }
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_yield(ExpressionNode *p_previous_operand, bool p_can_assign) {
@@ -3529,7 +3555,7 @@ GDScriptParser::ParseRule *GDScriptParser::get_rule(GDScriptTokenizer::Token::Ty
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // EXTENDS,
 		{ &GDScriptParser::parse_lambda,                    nullptr,                                        PREC_NONE }, // FUNC,
 		{ nullptr,                                          &GDScriptParser::parse_binary_operator,      	PREC_CONTENT_TEST }, // IN,
-		{ nullptr,                                          &GDScriptParser::parse_binary_operator,      	PREC_TYPE_TEST }, // IS,
+		{ nullptr,                                          &GDScriptParser::parse_type_test,            	PREC_TYPE_TEST }, // IS,
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // NAMESPACE,
 		{ &GDScriptParser::parse_preload,					nullptr,                                        PREC_NONE }, // PRELOAD,
 		{ &GDScriptParser::parse_self,                   	nullptr,                                        PREC_NONE }, // SELF,
@@ -3830,7 +3856,7 @@ bool GDScriptParser::export_annotations(const AnnotationNode *p_annotation, Node
 					variable->export_info.hint = PROPERTY_HINT_NODE_TYPE;
 					variable->export_info.hint_string = export_type.to_string();
 				} else {
-					push_error(R"(Export type can only be built-in, a resource, a node or an enum.)", variable);
+					push_error(R"(Export type can only be built-in, a resource, a node, or an enum.)", variable);
 					return false;
 				}
 
@@ -3875,8 +3901,7 @@ bool GDScriptParser::export_annotations(const AnnotationNode *p_annotation, Node
 				variable->export_info.hint_string = enum_hint_string;
 			} break;
 			default:
-				// TODO: Allow custom user resources.
-				push_error(R"(Export type can only be built-in, a resource, or an enum.)", variable);
+				push_error(R"(Export type can only be built-in, a resource, a node, or an enum.)", variable);
 				break;
 		}
 
@@ -4379,9 +4404,6 @@ void GDScriptParser::TreePrinter::print_binary_op(BinaryOpNode *p_binary_op) {
 		case BinaryOpNode::OP_LOGIC_OR:
 			push_text(" OR ");
 			break;
-		case BinaryOpNode::OP_TYPE_TEST:
-			push_text(" IS ");
-			break;
 		case BinaryOpNode::OP_CONTENT_TEST:
 			push_text(" IN ");
 			break;
@@ -4456,7 +4478,7 @@ void GDScriptParser::TreePrinter::print_class(ClassNode *p_class) {
 			} else {
 				first = false;
 			}
-			push_text(p_class->extends[i]);
+			push_text(p_class->extends[i]->name);
 		}
 	}
 
@@ -4583,6 +4605,9 @@ void GDScriptParser::TreePrinter::print_expression(ExpressionNode *p_expression)
 			break;
 		case Node::TERNARY_OPERATOR:
 			print_ternary_op(static_cast<TernaryOpNode *>(p_expression));
+			break;
+		case Node::TYPE_TEST:
+			print_type_test(static_cast<TypeTestNode *>(p_expression));
 			break;
 		case Node::UNARY_OPERATOR:
 			print_unary_op(static_cast<UnaryOpNode *>(p_expression));
@@ -4941,6 +4966,12 @@ void GDScriptParser::TreePrinter::print_type(TypeNode *p_type) {
 			print_identifier(p_type->type_chain[i]);
 		}
 	}
+}
+
+void GDScriptParser::TreePrinter::print_type_test(TypeTestNode *p_test) {
+	print_expression(p_test->operand);
+	push_text(" IS ");
+	print_type(p_test->test_type);
 }
 
 void GDScriptParser::TreePrinter::print_unary_op(UnaryOpNode *p_unary_op) {

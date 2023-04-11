@@ -40,6 +40,7 @@
 #include "scene/gui/line_edit.h"
 #include "scene/gui/menu_button.h"
 #include "scene/gui/option_button.h"
+#include "scene/gui/panel.h"
 #include "scene/gui/popup.h"
 #include "scene/gui/separator.h"
 #include "scene/gui/slider.h"
@@ -57,7 +58,16 @@ class ColorPresetButton : public BaseButton {
 
 	Color preset_color;
 
+	struct ThemeCache {
+		Ref<StyleBox> foreground_style;
+
+		Ref<Texture2D> background_icon;
+		Ref<Texture2D> overbright_indicator;
+	} theme_cache;
+
 protected:
+	virtual void _update_theme_item_cache() override;
+
 	void _notification(int);
 
 public:
@@ -111,7 +121,12 @@ private:
 
 	Vector<ColorMode *> modes;
 
-	Control *screen = nullptr;
+	Popup *picker_window = nullptr;
+	TextureRect *picker_texture_rect = nullptr;
+	Panel *picker_preview = nullptr;
+	Label *picker_preview_label = nullptr;
+	Ref<StyleBoxFlat> picker_preview_style_box;
+	Color picker_color;
 	Control *uv_edit = nullptr;
 	Control *w_edit = nullptr;
 	AspectRatioContainer *wheel_edit = nullptr;
@@ -188,12 +203,43 @@ private:
 	float v = 0.0;
 	Color last_color;
 
+	struct ThemeCache {
+		float base_scale = 1.0;
+
+		int content_margin = 0;
+		int label_width = 0;
+
+		int sv_height = 0;
+		int sv_width = 0;
+		int h_width = 0;
+
+		Ref<Texture2D> screen_picker;
+		Ref<Texture2D> expanded_arrow;
+		Ref<Texture2D> folded_arrow;
+		Ref<Texture2D> add_preset;
+
+		Ref<Texture2D> shape_rect;
+		Ref<Texture2D> shape_rect_wheel;
+		Ref<Texture2D> shape_circle;
+
+		Ref<Texture2D> bar_arrow;
+		Ref<Texture2D> sample_background_icon;
+		Ref<Texture2D> overbright_indicator;
+		Ref<Texture2D> picker_cursor;
+		Ref<Texture2D> color_hue_icon;
+
+		/* Mode buttons */
+		Ref<StyleBox> mode_button_normal;
+		Ref<StyleBox> mode_button_pressed;
+		Ref<StyleBox> mode_button_hover;
+	} theme_cache;
+
 	void _copy_color_to_hsv();
 	void _copy_hsv_to_color();
 
 	PickerShapeType _get_actual_shape() const;
 	void create_slider(GridContainer *gc, int idx);
-	void _reset_theme();
+	void _reset_sliders_theme();
 	void _html_submitted(const String &p_html);
 	void _value_changed(double);
 	void _update_controls();
@@ -211,10 +257,10 @@ private:
 	void _line_edit_input(const Ref<InputEvent> &p_event);
 	void _preset_input(const Ref<InputEvent> &p_event, const Color &p_color);
 	void _recent_preset_pressed(const bool pressed, ColorPresetButton *p_preset);
-	void _screen_input(const Ref<InputEvent> &p_event);
+	void _picker_texture_input(const Ref<InputEvent> &p_event);
 	void _text_changed(const String &p_new_text);
 	void _add_preset_pressed();
-	void _screen_pick_pressed();
+	void _pick_button_pressed();
 	void _html_focus_exit();
 
 	inline int _get_preset_size();
@@ -231,6 +277,8 @@ private:
 	void _drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from_control);
 
 protected:
+	virtual void _update_theme_item_cache() override;
+
 	void _notification(int);
 	static void _bind_methods();
 
@@ -320,6 +368,13 @@ class ColorPickerButton : public Button {
 	Color color;
 	bool edit_alpha = true;
 
+	struct ThemeCache {
+		Ref<StyleBox> normal_style;
+		Ref<Texture2D> background_icon;
+
+		Ref<Texture2D> overbright_indicator;
+	} theme_cache;
+
 	void _about_to_popup();
 	void _color_changed(const Color &p_color);
 	void _modal_closed();
@@ -329,6 +384,8 @@ class ColorPickerButton : public Button {
 	void _update_picker();
 
 protected:
+	virtual void _update_theme_item_cache() override;
+
 	void _notification(int);
 	static void _bind_methods();
 

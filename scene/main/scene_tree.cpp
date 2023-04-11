@@ -825,7 +825,6 @@ void SceneTree::set_pause(bool p_enabled) {
 		return;
 	}
 	paused = p_enabled;
-	NavigationServer3D::get_singleton()->set_active(!p_enabled);
 	PhysicsServer3D::get_singleton()->set_active(!p_enabled);
 	PhysicsServer2D::get_singleton()->set_active(!p_enabled);
 	if (get_root()) {
@@ -1407,6 +1406,10 @@ SceneTree::SceneTree() {
 	root->set_process_mode(Node::PROCESS_MODE_PAUSABLE);
 	root->set_name("root");
 	root->set_title(GLOBAL_GET("application/config/name"));
+
+	if (Engine::get_singleton()->is_editor_hint()) {
+		root->set_wrap_controls(true);
+	}
 
 #ifndef _3D_DISABLED
 	if (!root->get_world_3d().is_valid()) {

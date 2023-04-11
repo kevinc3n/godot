@@ -414,6 +414,18 @@ StringName EditorProperty::get_edited_property() const {
 	return property;
 }
 
+EditorInspector *EditorProperty::get_parent_inspector() const {
+	Node *parent = get_parent();
+	while (parent) {
+		EditorInspector *ei = Object::cast_to<EditorInspector>(parent);
+		if (ei) {
+			return ei;
+		}
+		parent = parent->get_parent();
+	}
+	ERR_FAIL_V_MSG(nullptr, "EditorProperty is outside inspector.");
+}
+
 void EditorProperty::set_doc_path(const String &p_doc_path) {
 	doc_path = p_doc_path;
 }
@@ -690,10 +702,11 @@ void EditorProperty::gui_input(const Ref<InputEvent> &p_event) {
 
 		if (revert_rect.has_point(mpos)) {
 			accept_event();
+			get_viewport()->gui_release_focus();
 			bool is_valid_revert = false;
 			Variant revert_value = EditorPropertyRevert::get_property_revert_value(object, property, &is_valid_revert);
 			ERR_FAIL_COND(!is_valid_revert);
-			emit_changed(property, revert_value);
+			emit_changed(_get_revert_property(), revert_value);
 			update_property();
 		}
 
@@ -1121,17 +1134,21 @@ void EditorInspectorCategory::_notification(int p_what) {
 			int font_size = get_theme_font_size(SNAME("bold_size"), SNAME("EditorFonts"));
 
 			int hs = get_theme_constant(SNAME("h_separation"), SNAME("Tree"));
+			int icon_size = get_theme_constant(SNAME("class_icon_size"), SNAME("Editor"));
 
 			int w = font->get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).width;
 			if (icon.is_valid()) {
-				w += hs + icon->get_width();
+				w += hs + icon_size;
 			}
 
 			int ofs = (get_size().width - w) / 2;
 
 			if (icon.is_valid()) {
-				draw_texture(icon, Point2(ofs, (get_size().height - icon->get_height()) / 2).floor());
-				ofs += hs + icon->get_width();
+				Size2 rect_size = Size2(icon_size, icon_size);
+				Point2 rect_pos = Point2(ofs, (get_size().height - icon_size) / 2).floor();
+				draw_texture_rect(icon, Rect2(rect_pos, rect_size));
+
+				ofs += hs + icon_size;
 			}
 
 			Color color = get_theme_color(SNAME("font_color"), SNAME("Tree"));
@@ -1674,11 +1691,11 @@ void EditorInspectorArray::_panel_gui_input(Ref<InputEvent> p_event, int p_index
 void EditorInspectorArray::_move_element(int p_element_index, int p_to_pos) {
 	String action_name;
 	if (p_element_index < 0) {
-		action_name = vformat("Add element to property array with prefix %s.", array_element_prefix);
+		action_name = vformat(TTR("Add element to property array with prefix %s."), array_element_prefix);
 	} else if (p_to_pos < 0) {
-		action_name = vformat("Remove element %d from property array with prefix %s.", p_element_index, array_element_prefix);
+		action_name = vformat(TTR("Remove element %d from property array with prefix %s."), p_element_index, array_element_prefix);
 	} else {
-		action_name = vformat("Move element %d to position %d in property array with prefix %s.", p_element_index, p_to_pos, array_element_prefix);
+		action_name = vformat(TTR("Move element %d to position %d in property array with prefix %s."), p_element_index, p_to_pos, array_element_prefix);
 	}
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
 	undo_redo->create_action(action_name);
@@ -1825,7 +1842,7 @@ void EditorInspectorArray::_move_element(int p_element_index, int p_to_pos) {
 
 void EditorInspectorArray::_clear_array() {
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
-	undo_redo->create_action(vformat("Clear property array with prefix %s.", array_element_prefix));
+	undo_redo->create_action(vformat(TTR("Clear property array with prefix %s."), array_element_prefix));
 	if (mode == MODE_USE_MOVE_ARRAY_ELEMENT_FUNCTION) {
 		for (int i = count - 1; i >= 0; i--) {
 			// Call the function.
@@ -1878,7 +1895,7 @@ void EditorInspectorArray::_resize_array(int p_size) {
 	}
 
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
-	undo_redo->create_action(vformat("Resize property array with prefix %s.", array_element_prefix));
+	undo_redo->create_action(vformat(TTR("Resize property array with prefix %s."), array_element_prefix));
 	if (p_size > count) {
 		if (mode == MODE_USE_MOVE_ARRAY_ELEMENT_FUNCTION) {
 			for (int i = count; i < p_size; i++) {
@@ -2484,6 +2501,10 @@ Button *EditorInspector::create_inspector_action_button(const String &p_text) {
 	return button;
 }
 
+bool EditorInspector::is_main_editor_inspector() const {
+	return InspectorDock::get_singleton() && InspectorDock::get_inspector_singleton() == this;
+}
+
 String EditorInspector::get_selected_path() const {
 	return property_selected;
 }
@@ -2736,46 +2757,28 @@ void EditorInspector::update_tree() {
 			String label = p.name;
 			doc_name = p.name;
 
-			// Set the category icon.
+			// Use category's owner script to update some of its information.
 			if (!EditorNode::get_editor_data().is_type_recognized(type) && p.hint_string.length() && FileAccess::exists(p.hint_string)) {
-				// If we have a category inside a script, search for the first script with a valid icon.
+				StringName script_name;
+
 				Ref<Script> scr = ResourceLoader::load(p.hint_string, "Script");
-				StringName base_type;
-				StringName name;
 				if (scr.is_valid()) {
-					base_type = scr->get_instance_base_type();
-					name = EditorNode::get_editor_data().script_class_get_name(scr->get_path());
+					script_name = EditorNode::get_editor_data().script_class_get_name(scr->get_path());
+
+					// Update the docs reference and the label based on the script.
 					Vector<DocData::ClassDoc> docs = scr->get_documentation();
 					if (!docs.is_empty()) {
 						doc_name = docs[0].name;
 					}
-					if (name != StringName() && label != name) {
-						label = name;
+					if (script_name != StringName() && label != script_name) {
+						label = script_name;
 					}
 				}
-				while (scr.is_valid()) {
-					name = EditorNode::get_editor_data().script_class_get_name(scr->get_path());
-					String icon_path = EditorNode::get_editor_data().script_class_get_icon_path(name);
-					if (name != StringName() && !icon_path.is_empty()) {
-						category->icon = ResourceLoader::load(icon_path, "Texture");
-						break;
-					}
 
-					const EditorData::CustomType *ctype = EditorNode::get_editor_data().get_custom_type_by_path(scr->get_path());
-					if (ctype) {
-						category->icon = ctype->icon;
-						break;
-					}
-					scr = scr->get_base_script();
-				}
-				if (category->icon.is_null() && has_theme_icon(base_type, SNAME("EditorIcons"))) {
-					category->icon = get_theme_icon(base_type, SNAME("EditorIcons"));
-				}
-			}
-			if (category->icon.is_null()) {
-				if (!type.is_empty()) { // Can happen for built-in scripts.
-					category->icon = EditorNode::get_singleton()->get_class_icon(type, "Object");
-				}
+				// Find the corresponding icon.
+				category->icon = EditorNode::get_singleton()->get_class_icon(script_name, "Object");
+			} else if (!type.is_empty()) {
+				category->icon = EditorNode::get_singleton()->get_class_icon(type, "Object");
 			}
 
 			// Set the category label.
@@ -3116,6 +3119,11 @@ void EditorInspector::update_tree() {
 			StringName propname = property_prefix + p.name;
 			bool found = false;
 
+			// Small hack for theme_overrides. They are listed under Control, but come from another class.
+			if (classname == "Control" && p.name.begins_with("theme_override_")) {
+				classname = get_edited_object()->get_class();
+			}
+
 			// Search for the property description in the cache.
 			HashMap<StringName, HashMap<StringName, PropertyDocInfo>>::Iterator E = doc_info_cache.find(classname);
 			if (E) {
@@ -3286,7 +3294,7 @@ void EditorInspector::update_tree() {
 		_parse_added_editors(main_vbox, nullptr, ped);
 	}
 
-	if (_is_main_editor_inspector()) {
+	if (is_main_editor_inspector()) {
 		// Updating inspector might invalidate some editing owners.
 		EditorNode::get_singleton()->hide_unused_editors();
 	}
@@ -3316,7 +3324,7 @@ void EditorInspector::_clear(bool p_hide_plugins) {
 	pending.clear();
 	restart_request_props.clear();
 
-	if (p_hide_plugins && _is_main_editor_inspector()) {
+	if (p_hide_plugins && is_main_editor_inspector()) {
 		EditorNode::get_singleton()->hide_unused_editors(this);
 	}
 }
@@ -3353,10 +3361,23 @@ void EditorInspector::set_keying(bool p_active) {
 		return;
 	}
 	keying = p_active;
-	update_tree();
+	_keying_changed();
+}
+
+void EditorInspector::_keying_changed() {
+	for (const KeyValue<StringName, List<EditorProperty *>> &F : editor_property_map) {
+		for (EditorProperty *E : F.value) {
+			if (E) {
+				E->set_keying(keying);
+			}
+		}
+	}
 }
 
 void EditorInspector::set_read_only(bool p_read_only) {
+	if (p_read_only == read_only) {
+		return;
+	}
 	read_only = p_read_only;
 	update_tree();
 }
@@ -3650,10 +3671,6 @@ void EditorInspector::_edit_set(const String &p_name, const Variant &p_value, bo
 			E->update_editor_property_status();
 		}
 	}
-}
-
-bool EditorInspector::_is_main_editor_inspector() const {
-	return InspectorDock::get_singleton() && InspectorDock::get_inspector_singleton() == this;
 }
 
 void EditorInspector::_property_changed(const String &p_path, const Variant &p_value, const String &p_name, bool p_changing, bool p_update_all) {

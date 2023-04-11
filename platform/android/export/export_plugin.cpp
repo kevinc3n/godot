@@ -251,9 +251,9 @@ static const int EXPORT_FORMAT_AAB = 1;
 static const char *APK_ASSETS_DIRECTORY = "res://android/build/assets";
 static const char *AAB_ASSETS_DIRECTORY = "res://android/build/assetPacks/installTime/src/main/assets";
 
-static const int DEFAULT_MIN_SDK_VERSION = 21; // Should match the value in 'platform/android/java/app/config.gradle#minSdk'
+static const int OPENGL_MIN_SDK_VERSION = 21; // Should match the value in 'platform/android/java/app/config.gradle#minSdk'
 static const int VULKAN_MIN_SDK_VERSION = 24;
-static const int DEFAULT_TARGET_SDK_VERSION = 32; // Should match the value in 'platform/android/java/app/config.gradle#targetSdk'
+static const int DEFAULT_TARGET_SDK_VERSION = 33; // Should match the value in 'platform/android/java/app/config.gradle#targetSdk'
 
 #ifndef ANDROID_ENABLED
 void EditorExportPlatformAndroid::_check_for_changes_poll_thread(void *ud) {
@@ -1066,8 +1066,13 @@ void EditorExportPlatformAndroid::_fix_manifest(const Ref<EditorExportPreset> &p
 					if (_uses_vulkan()) {
 						// Require vulkan hardware level 1 support
 						feature_names.push_back("android.hardware.vulkan.level");
-						feature_required_list.push_back(true);
+						feature_required_list.push_back(false);
 						feature_versions.push_back(1);
+
+						// Require vulkan version 1.0
+						feature_names.push_back("android.hardware.vulkan.version");
+						feature_required_list.push_back(true);
+						feature_versions.push_back(0x400003); // Encoded value for api version 1.0
 					}
 
 					if (feature_names.size() > 0) {
@@ -1706,7 +1711,7 @@ void EditorExportPlatformAndroid::get_export_options(List<ExportOption> *r_optio
 	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "gradle_build/export_format", PROPERTY_HINT_ENUM, "Export APK,Export AAB"), EXPORT_FORMAT_APK));
 	// Using String instead of int to default to an empty string (no override) with placeholder for instructions (see GH-62465).
 	// This implies doing validation that the string is a proper int.
-	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "gradle_build/min_sdk", PROPERTY_HINT_PLACEHOLDER_TEXT, vformat("%d (default)", DEFAULT_MIN_SDK_VERSION)), ""));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "gradle_build/min_sdk", PROPERTY_HINT_PLACEHOLDER_TEXT, vformat("%d (default)", VULKAN_MIN_SDK_VERSION)), ""));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "gradle_build/target_sdk", PROPERTY_HINT_PLACEHOLDER_TEXT, vformat("%d (default)", DEFAULT_TARGET_SDK_VERSION)), ""));
 
 	Vector<PluginConfigAndroid> plugins_configs = get_plugins();
@@ -2337,7 +2342,7 @@ bool EditorExportPlatformAndroid::has_valid_project_configuration(const Ref<Edit
 
 	// Check the min sdk version.
 	String min_sdk_str = p_preset->get("gradle_build/min_sdk");
-	int min_sdk_int = DEFAULT_MIN_SDK_VERSION;
+	int min_sdk_int = VULKAN_MIN_SDK_VERSION;
 	if (!min_sdk_str.is_empty()) { // Empty means no override, nothing to do.
 		if (!gradle_build_enabled) {
 			valid = false;
@@ -2350,9 +2355,9 @@ bool EditorExportPlatformAndroid::has_valid_project_configuration(const Ref<Edit
 			err += "\n";
 		} else {
 			min_sdk_int = min_sdk_str.to_int();
-			if (min_sdk_int < DEFAULT_MIN_SDK_VERSION) {
+			if (min_sdk_int < OPENGL_MIN_SDK_VERSION) {
 				valid = false;
-				err += vformat(TTR("\"Min SDK\" cannot be lower than %d, which is the version needed by the Godot library."), DEFAULT_MIN_SDK_VERSION);
+				err += vformat(TTR("\"Min SDK\" cannot be lower than %d, which is the version needed by the Godot library."), OPENGL_MIN_SDK_VERSION);
 				err += "\n";
 			}
 		}
@@ -2808,7 +2813,7 @@ Error EditorExportPlatformAndroid::export_project_helper(const Ref<EditorExportP
 		String version_name = p_preset->get("version/name");
 		String min_sdk_version = p_preset->get("gradle_build/min_sdk");
 		if (!min_sdk_version.is_valid_int()) {
-			min_sdk_version = itos(DEFAULT_MIN_SDK_VERSION);
+			min_sdk_version = itos(VULKAN_MIN_SDK_VERSION);
 		}
 		String target_sdk_version = p_preset->get("gradle_build/target_sdk");
 		if (!target_sdk_version.is_valid_int()) {

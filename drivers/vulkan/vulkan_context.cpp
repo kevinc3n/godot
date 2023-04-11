@@ -101,6 +101,7 @@ VkResult VulkanContext::vkCreateRenderPass2KHR(VkDevice p_device, const VkRender
 			attachments.push_back(att);
 		}
 
+		Vector<Vector<VkAttachmentReference>> attachment_references;
 		Vector<VkSubpassDescription> subpasses;
 		for (uint32_t i = 0; i < p_create_info->subpassCount; i++) {
 			// Here we need to do more, again it's just stripping out type and next
@@ -124,6 +125,10 @@ VkResult VulkanContext::vkCreateRenderPass2KHR(VkDevice p_device, const VkRender
 				p_create_info->pSubpasses[i].preserveAttachmentCount, /* preserveAttachmentCount */
 				p_create_info->pSubpasses[i].pPreserveAttachments /* pPreserveAttachments */
 			};
+			attachment_references.push_back(input_attachments);
+			attachment_references.push_back(color_attachments);
+			attachment_references.push_back(resolve_attachments);
+			attachment_references.push_back(depth_attachments);
 
 			subpasses.push_back(subpass);
 		}
@@ -2269,8 +2274,8 @@ Error VulkanContext::prepare_buffers() {
 			} else if (err == VK_SUBOPTIMAL_KHR) {
 				// Swapchain is not as optimal as it could be, but the platform's
 				// presentation engine will still present the image correctly.
-				print_verbose("Vulkan: Early suboptimal swapchain.");
-				break;
+				print_verbose("Vulkan: Early suboptimal swapchain, recreating.");
+				_update_swap_chain(w);
 			} else if (err != VK_SUCCESS) {
 				ERR_BREAK_MSG(err != VK_SUCCESS, "Vulkan: Did not create swapchain successfully. Error code: " + String(string_VkResult(err)));
 			} else {

@@ -35,6 +35,7 @@ namespace GodotTools
         private PopupMenu _menuPopup;
 
         private AcceptDialog _errorDialog;
+        private ConfirmationDialog _confirmCreateSlnDialog;
 
         private Button _bottomPanelBtn;
         private Button _toolBarBuildButton;
@@ -99,7 +100,7 @@ namespace GodotTools
                     pr.Step("Done".TTR());
 
                     // Here, after all calls to progress_task_step
-                    CallDeferred(nameof(_RemoveCreateSlnMenuOption));
+                    CallDeferred(nameof(_ShowDotnetFeatures));
                 }
                 else
                 {
@@ -110,9 +111,8 @@ namespace GodotTools
             }
         }
 
-        private void _RemoveCreateSlnMenuOption()
+        private void _ShowDotnetFeatures()
         {
-            _menuPopup.RemoveItem(_menuPopup.GetItemIndex((int)MenuOptions.CreateSln));
             _bottomPanelBtn.Show();
             _toolBarBuildButton.Show();
         }
@@ -122,22 +122,15 @@ namespace GodotTools
             switch ((MenuOptions)id)
             {
                 case MenuOptions.CreateSln:
-                    CreateProjectSolution();
-                    break;
-                case MenuOptions.SetupGodotNugetFallbackFolder:
                 {
-                    try
+                    if (File.Exists(GodotSharpDirs.ProjectSlnPath) || File.Exists(GodotSharpDirs.ProjectCsProjPath))
                     {
-                        string fallbackFolder = NuGetUtils.GodotFallbackFolderPath;
-                        NuGetUtils.AddFallbackFolderToGodotNuGetConfigs(NuGetUtils.GodotFallbackFolderName,
-                            fallbackFolder);
-                        NuGetUtils.AddBundledPackagesToFallbackFolder(fallbackFolder);
+                        ShowConfirmCreateSlnDialog();
                     }
-                    catch (Exception e)
+                    else
                     {
-                        ShowErrorDialog("Failed to setup Godot NuGet Offline Packages: " + e.Message);
+                        CreateProjectSolution();
                     }
-
                     break;
                 }
                 default:
@@ -159,7 +152,6 @@ namespace GodotTools
         private enum MenuOptions
         {
             CreateSln,
-            SetupGodotNugetFallbackFolder,
         }
 
         public void ShowErrorDialog(string message, string title = "Error")
@@ -167,6 +159,13 @@ namespace GodotTools
             _errorDialog.Title = title;
             _errorDialog.DialogText = message;
             _errorDialog.PopupCentered();
+        }
+
+        public void ShowConfirmCreateSlnDialog()
+        {
+            _confirmCreateSlnDialog.Title = "C# solution already exists. This will override the existing C# project file, any manual changes will be lost.".TTR();
+            _confirmCreateSlnDialog.DialogText = "Create C# solution".TTR();
+            _confirmCreateSlnDialog.PopupCentered();
         }
 
         private static string _vsCodePath = string.Empty;
@@ -272,15 +271,14 @@ namespace GodotTools
                         }
                     }
 
-                    string resourcePath = ProjectSettings.GlobalizePath("res://");
-                    args.Add(resourcePath);
+                    args.Add(Path.GetDirectoryName(GodotSharpDirs.ProjectSlnPath));
 
                     string scriptPath = ProjectSettings.GlobalizePath(script.ResourcePath);
 
                     if (line >= 0)
                     {
                         args.Add("-g");
-                        args.Add($"{scriptPath}:{line}:{col}");
+                        args.Add($"{scriptPath}:{line + 1}:{col + 1}");
                     }
                     else
                     {
@@ -421,6 +419,10 @@ namespace GodotTools
             _errorDialog = new AcceptDialog();
             editorBaseControl.AddChild(_errorDialog);
 
+            _confirmCreateSlnDialog = new ConfirmationDialog();
+            _confirmCreateSlnDialog.Confirmed += () => CreateProjectSolution();
+            editorBaseControl.AddChild(_confirmCreateSlnDialog);
+
             MSBuildPanel = new MSBuildPanel();
             MSBuildPanel.Ready += () =>
                 MSBuildPanel.BuildOutputView.BuildStateChanged += BuildStateChanged;
@@ -454,8 +456,8 @@ namespace GodotTools
             {
                 _bottomPanelBtn.Hide();
                 _toolBarBuildButton.Hide();
-                _menuPopup.AddItem("Create C# solution".TTR(), (int)MenuOptions.CreateSln);
             }
+            _menuPopup.AddItem("Create C# solution".TTR(), (int)MenuOptions.CreateSln);
 
             _menuPopup.IdPressed += _MenuOptionPressed;
 
@@ -513,17 +515,6 @@ namespace GodotTools
             AddExportPlugin(exportPlugin);
             exportPlugin.RegisterExportSettings();
             _exportPluginWeak = WeakRef(exportPlugin);
-
-            try
-            {
-                // At startup we make sure NuGet.Config files have our Godot NuGet fallback folder included
-                NuGetUtils.AddFallbackFolderToGodotNuGetConfigs(NuGetUtils.GodotFallbackFolderName,
-                    NuGetUtils.GodotFallbackFolderPath);
-            }
-            catch (Exception e)
-            {
-                GD.PushError("Failed to add Godot NuGet Offline Packages to NuGet.Config: " + e.Message);
-            }
 
             BuildManager.Initialize();
             RiderPathManager.Initialize();

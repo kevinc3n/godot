@@ -68,7 +68,7 @@ public:
 	typedef void (*RegisterFunc)(EditorFileDialog *);
 
 	static GetIconFunc get_icon_func;
-	static GetIconFunc get_large_icon_func;
+	static GetIconFunc get_thumbnail_func;
 	static RegisterFunc register_func;
 	static RegisterFunc unregister_func;
 
@@ -143,7 +143,7 @@ private:
 	DisplayMode display_mode;
 
 	bool disable_overwrite_warning = false;
-	bool invalidated = true;
+	bool is_invalidating = false;
 
 	struct ThemeCache {
 		Ref<Texture2D> parent_folder;
@@ -216,6 +216,8 @@ private:
 	void _go_back();
 	void _go_forward();
 
+	void _invalidate();
+
 	virtual void _post_popup() override;
 
 	void _save_to_recent();
@@ -242,6 +244,8 @@ public:
 	void popup_file_dialog();
 	void clear_filters();
 	void add_filter(const String &p_filter, const String &p_description = "");
+	void set_filters(const Vector<String> &p_filters);
+	Vector<String> get_filters() const;
 
 	void set_enable_multiple_selection(bool p_enable);
 	Vector<String> get_selected_files() const;

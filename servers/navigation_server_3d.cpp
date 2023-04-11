@@ -115,7 +115,9 @@ void NavigationServer3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("free_rid", "rid"), &NavigationServer3D::free);
 
 	ClassDB::bind_method(D_METHOD("set_active", "active"), &NavigationServer3D::set_active);
-	ClassDB::bind_method(D_METHOD("process", "delta_time"), &NavigationServer3D::process);
+
+	ClassDB::bind_method(D_METHOD("set_debug_enabled", "enabled"), &NavigationServer3D::set_debug_enabled);
+	ClassDB::bind_method(D_METHOD("get_debug_enabled"), &NavigationServer3D::get_debug_enabled);
 
 	ADD_SIGNAL(MethodInfo("map_changed", PropertyInfo(Variant::RID, "map")));
 
@@ -142,13 +144,13 @@ NavigationServer3D::NavigationServer3D() {
 	ERR_FAIL_COND(singleton != nullptr);
 	singleton = this;
 
-	GLOBAL_DEF("navigation/2d/default_cell_size", 1);
-	GLOBAL_DEF("navigation/2d/default_edge_connection_margin", 1);
-	GLOBAL_DEF("navigation/2d/default_link_connection_radius", 4);
+	GLOBAL_DEF_BASIC("navigation/2d/default_cell_size", 1);
+	GLOBAL_DEF_BASIC("navigation/2d/default_edge_connection_margin", 1);
+	GLOBAL_DEF_BASIC("navigation/2d/default_link_connection_radius", 4);
 
-	GLOBAL_DEF("navigation/3d/default_cell_size", 0.25);
-	GLOBAL_DEF("navigation/3d/default_edge_connection_margin", 0.25);
-	GLOBAL_DEF("navigation/3d/default_link_connection_radius", 1.0);
+	GLOBAL_DEF_BASIC("navigation/3d/default_cell_size", 0.25);
+	GLOBAL_DEF_BASIC("navigation/3d/default_edge_connection_margin", 0.25);
+	GLOBAL_DEF_BASIC("navigation/3d/default_link_connection_radius", 1.0);
 
 #ifdef DEBUG_ENABLED
 	debug_navigation_edge_connection_color = GLOBAL_DEF("debug/shapes/navigation/edge_connection_color", Color(1.0, 0.0, 1.0, 1.0));
@@ -183,6 +185,24 @@ NavigationServer3D::NavigationServer3D() {
 
 NavigationServer3D::~NavigationServer3D() {
 	singleton = nullptr;
+}
+
+void NavigationServer3D::set_debug_enabled(bool p_enabled) {
+#ifdef DEBUG_ENABLED
+	if (debug_enabled != p_enabled) {
+		debug_dirty = true;
+	}
+
+	debug_enabled = p_enabled;
+
+	if (debug_dirty) {
+		call_deferred("_emit_navigation_debug_changed_signal");
+	}
+#endif // DEBUG_ENABLED
+}
+
+bool NavigationServer3D::get_debug_enabled() const {
+	return debug_enabled;
 }
 
 #ifdef DEBUG_ENABLED
@@ -436,14 +456,14 @@ Color NavigationServer3D::get_debug_navigation_link_connection_disabled_color() 
 	return debug_navigation_link_connection_disabled_color;
 }
 
-void NavigationServer3D::set_debug_navigation_agent_path_point_size(float p_point_size) {
+void NavigationServer3D::set_debug_navigation_agent_path_point_size(real_t p_point_size) {
 	debug_navigation_agent_path_point_size = MAX(0.1, p_point_size);
 	if (debug_navigation_agent_path_point_material.is_valid()) {
 		debug_navigation_agent_path_point_material->set_point_size(debug_navigation_agent_path_point_size);
 	}
 }
 
-float NavigationServer3D::get_debug_navigation_agent_path_point_size() const {
+real_t NavigationServer3D::get_debug_navigation_agent_path_point_size() const {
 	return debug_navigation_agent_path_point_size;
 }
 
@@ -532,22 +552,6 @@ void NavigationServer3D::set_debug_navigation_enable_link_connections_xray(const
 
 bool NavigationServer3D::get_debug_navigation_enable_link_connections_xray() const {
 	return debug_navigation_enable_link_connections_xray;
-}
-
-void NavigationServer3D::set_debug_enabled(bool p_enabled) {
-	if (debug_enabled != p_enabled) {
-		debug_dirty = true;
-	}
-
-	debug_enabled = p_enabled;
-
-	if (debug_dirty) {
-		call_deferred("_emit_navigation_debug_changed_signal");
-	}
-}
-
-bool NavigationServer3D::get_debug_enabled() const {
-	return debug_enabled;
 }
 
 void NavigationServer3D::set_debug_navigation_enable_agent_paths(const bool p_value) {

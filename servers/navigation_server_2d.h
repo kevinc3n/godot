@@ -234,10 +234,10 @@ public:
 	NavigationServer2D();
 	virtual ~NavigationServer2D();
 
-#ifdef DEBUG_ENABLED
 	void set_debug_enabled(bool p_enabled);
 	bool get_debug_enabled() const;
 
+#ifdef DEBUG_ENABLED
 	void set_debug_navigation_edge_connection_color(const Color &p_color);
 	Color get_debug_navigation_edge_connection_color() const;
 
@@ -246,6 +246,12 @@ public:
 
 	void set_debug_navigation_geometry_face_disabled_color(const Color &p_color);
 	Color get_debug_navigation_geometry_face_disabled_color() const;
+
+	void set_debug_navigation_geometry_edge_color(const Color &p_color);
+	Color get_debug_navigation_geometry_edge_color() const;
+
+	void set_debug_navigation_geometry_edge_disabled_color(const Color &p_color);
+	Color get_debug_navigation_geometry_edge_disabled_color() const;
 
 	void set_debug_navigation_link_connection_color(const Color &p_color);
 	Color get_debug_navigation_link_connection_color() const;
@@ -256,14 +262,20 @@ public:
 	void set_debug_navigation_enable_edge_connections(const bool p_value);
 	bool get_debug_navigation_enable_edge_connections() const;
 
+	void set_debug_navigation_enable_geometry_face_random_color(const bool p_value);
+	bool get_debug_navigation_enable_geometry_face_random_color() const;
+
+	void set_debug_navigation_enable_edge_lines(const bool p_value);
+	bool get_debug_navigation_enable_edge_lines() const;
+
 	void set_debug_navigation_agent_path_color(const Color &p_color);
 	Color get_debug_navigation_agent_path_color() const;
 
 	void set_debug_navigation_enable_agent_paths(const bool p_value);
 	bool get_debug_navigation_enable_agent_paths() const;
 
-	void set_debug_navigation_agent_path_point_size(float p_point_size);
-	float get_debug_navigation_agent_path_point_size() const;
+	void set_debug_navigation_agent_path_point_size(real_t p_point_size);
+	real_t get_debug_navigation_agent_path_point_size() const;
 #endif // DEBUG_ENABLED
 
 #ifdef DEBUG_ENABLED

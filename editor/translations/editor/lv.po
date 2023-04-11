@@ -10,13 +10,14 @@
 # Rihards Kubilis <oldcar@inbox.lv>, 2020.
 # M E <gruffy7932@gmail.com>, 2021, 2022.
 # D āvis <dlektauers@gmail.com>, 2022.
+# Agnis Aldiņš <agnis16@gmail.com>, 2023.
 msgid ""
 msgstr ""
 "Project-Id-Version: Godot Engine editor interface\n"
 "Report-Msgid-Bugs-To: https://github.com/godotengine/godot\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2022-05-07 16:08+0000\n"
-"Last-Translator: D āvis <dlektauers@gmail.com>\n"
+"PO-Revision-Date: 2023-03-09 00:25+0000\n"
+"Last-Translator: Agnis Aldiņš <agnis16@gmail.com>\n"
 "Language-Team: Latvian <https://hosted.weblate.org/projects/godot-engine/"
 "godot/lv/>\n"
 "Language: lv\n"
@@ -25,7 +26,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n % 10 == 0 || n % 100 >= 11 && n % 100 <= "
 "19) ? 0 : ((n % 10 == 1 && n % 100 != 11) ? 1 : 2);\n"
-"X-Generator: Weblate 4.12.1\n"
+"X-Generator: Weblate 4.16.2-dev\n"
 
 msgid "Select"
 msgstr "Izvēlēties"
@@ -385,12 +386,6 @@ msgstr "Izmanto Bezjē Līknes"
 
 msgid "Create RESET Track(s)"
 msgstr "Izveidot atiestatīšanas celiņu(s)"
-
-msgid "Anim. Optimizer"
-msgstr "Anim. Optimizētājs"
-
-msgid "Max. Angular Error:"
-msgstr "Maks. Rotācijas Kļūda:"
 
 msgid "Optimize"
 msgstr "Optimizēt"
@@ -1267,9 +1262,6 @@ msgstr "Atvērt"
 msgid "Select Current Folder"
 msgstr "Izvēlēties pašreizējo mapi"
 
-msgid "File exists, overwrite?"
-msgstr "Fails eksistē. Pārrakstīt ?"
-
 msgid "Select This Folder"
 msgstr "Izvēlēties Šo Mapi"
 
@@ -1408,6 +1400,9 @@ msgstr "pārraksta %s:"
 
 msgid "default:"
 msgstr "pēc noklusējuma:"
+
+msgid "Operators"
+msgstr "Operātors"
 
 msgid "Theme Properties"
 msgstr "Motīva iestatījumi"
@@ -2017,7 +2012,7 @@ msgid "Send Docs Feedback"
 msgstr "Sūtīt dokumentu atsauksmi"
 
 msgid "Community"
-msgstr "Komūns"
+msgstr "Komūna"
 
 msgid "About Godot"
 msgstr "Par Godot"
@@ -3515,9 +3510,6 @@ msgstr "Nederīga animācija: '%s'."
 msgid "Nothing connected to input '%s' of node '%s'."
 msgstr "Nekas nav savienots ar ieeju '%s' mezglam '%s'."
 
-msgid "Pick a color from the editor window."
-msgstr "Izvēlēties krāsu no redaktora loga."
-
 msgid "Add current color as a preset."
 msgstr "Pievienot pašreizējo krāsu kā iepriekšnoteiktu krāsu."
 
@@ -3526,9 +3518,6 @@ msgstr "Brīdinājums!"
 
 msgid "Please Confirm..."
 msgstr "Lūdzu apstipriniet..."
-
-msgid "Must use a valid extension."
-msgstr "Jābūt derīgai galotnei."
 
 msgid "Enable grid minimap."
 msgstr "Iespējot režģa minikarti."

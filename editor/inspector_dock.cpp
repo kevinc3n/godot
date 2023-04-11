@@ -186,7 +186,7 @@ void InspectorDock::_menu_option_confirm(int p_option, bool p_confirmed) {
 					}
 				}
 
-				int history_id = EditorUndoRedoManager::get_singleton()->get_history_for_object(current).id;
+				int history_id = EditorUndoRedoManager::get_singleton()->get_history_id_for_object(current);
 				EditorUndoRedoManager::get_singleton()->clear_history(true, history_id);
 
 				EditorNode::get_singleton()->edit_item(current, inspector);
@@ -298,8 +298,7 @@ void InspectorDock::_prepare_resource_extra_popup() {
 	popup->set_item_disabled(popup->get_item_index(RESOURCE_EDIT_CLIPBOARD), r.is_null());
 
 	Ref<Resource> current_res = _get_current_resource();
-	ERR_FAIL_COND(current_res.is_null());
-	popup->set_item_disabled(popup->get_item_index(RESOURCE_SHOW_IN_FILESYSTEM), current_res->is_built_in());
+	popup->set_item_disabled(popup->get_item_index(RESOURCE_SHOW_IN_FILESYSTEM), current_res.is_null() || current_res->is_built_in());
 }
 
 Ref<Resource> InspectorDock::_get_current_resource() const {
@@ -421,12 +420,9 @@ Container *InspectorDock::get_addon_area() {
 
 void InspectorDock::_notification(int p_what) {
 	switch (p_what) {
-		case NOTIFICATION_ENTER_TREE:
+		case NOTIFICATION_THEME_CHANGED:
 		case NOTIFICATION_TRANSLATION_CHANGED:
-		case NOTIFICATION_LAYOUT_DIRECTION_CHANGED:
-		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
-			set_theme(EditorNode::get_singleton()->get_gui_base()->get_theme());
-
+		case NOTIFICATION_LAYOUT_DIRECTION_CHANGED: {
 			resource_new_button->set_icon(get_theme_icon(SNAME("New"), SNAME("EditorIcons")));
 			resource_load_button->set_icon(get_theme_icon(SNAME("Load"), SNAME("EditorIcons")));
 			resource_save_button->set_icon(get_theme_icon(SNAME("Save"), SNAME("EditorIcons")));
@@ -660,8 +656,8 @@ InspectorDock::InspectorDock(EditorData &p_editor_data) {
 	resource_extra_button->set_tooltip_text(TTR("Extra resource options."));
 	general_options_hb->add_child(resource_extra_button);
 	resource_extra_button->connect("about_to_popup", callable_mp(this, &InspectorDock::_prepare_resource_extra_popup));
-	resource_extra_button->get_popup()->add_icon_shortcut(get_theme_icon(SNAME("ActionPaste"), SNAME("EditorIcons")), ED_SHORTCUT("property_editor/paste_resource", TTR("Edit Resource from Clipboard")), RESOURCE_EDIT_CLIPBOARD);
-	resource_extra_button->get_popup()->add_icon_shortcut(get_theme_icon(SNAME("ActionCopy"), SNAME("EditorIcons")), ED_SHORTCUT("property_editor/copy_resource", TTR("Copy Resource")), RESOURCE_COPY);
+	resource_extra_button->get_popup()->add_shortcut(ED_SHORTCUT("property_editor/paste_resource", TTR("Edit Resource from Clipboard")), RESOURCE_EDIT_CLIPBOARD);
+	resource_extra_button->get_popup()->add_shortcut(ED_SHORTCUT("property_editor/copy_resource", TTR("Copy Resource")), RESOURCE_COPY);
 	resource_extra_button->get_popup()->set_item_disabled(1, true);
 	resource_extra_button->get_popup()->add_separator();
 	resource_extra_button->get_popup()->add_shortcut(ED_SHORTCUT("property_editor/show_in_filesystem", TTR("Show in FileSystem")), RESOURCE_SHOW_IN_FILESYSTEM);

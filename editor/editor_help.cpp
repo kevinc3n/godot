@@ -263,16 +263,8 @@ void EditorHelp::_add_type(const String &p_type, const String &p_enum) {
 	class_desc->pop();
 }
 
-void EditorHelp::_add_type_icon(const String &p_type, int p_size) {
-	Ref<Texture2D> icon;
-	if (has_theme_icon(p_type, SNAME("EditorIcons"))) {
-		icon = get_theme_icon(p_type, SNAME("EditorIcons"));
-	} else if (ClassDB::class_exists(p_type) && ClassDB::is_parent_class(p_type, "Object")) {
-		icon = get_theme_icon(SNAME("Object"), SNAME("EditorIcons"));
-	} else {
-		icon = get_theme_icon(SNAME("ArrowRight"), SNAME("EditorIcons"));
-	}
-
+void EditorHelp::_add_type_icon(const String &p_type, int p_size, const String &p_fallback) {
+	Ref<Texture2D> icon = EditorNode::get_singleton()->get_class_icon(p_type, p_fallback);
 	Vector2i size = Vector2i(icon->get_width(), icon->get_height());
 	if (p_size > 0) {
 		// Ensures icon scales proportionally on both axis, based on icon height.
@@ -644,7 +636,7 @@ void EditorHelp::_update_doc() {
 	section_line.push_back(Pair<String, int>(TTR("Top"), 0));
 	_push_title_font();
 	class_desc->add_text(TTR("Class:") + " ");
-	_add_type_icon(edited_class, theme_cache.doc_title_font_size);
+	_add_type_icon(edited_class, theme_cache.doc_title_font_size, "Object");
 	class_desc->add_text(" ");
 	class_desc->push_color(theme_cache.headline_color);
 	_add_text(edited_class);
@@ -676,7 +668,7 @@ void EditorHelp::_update_doc() {
 		String inherits = cd.inherits;
 
 		while (!inherits.is_empty()) {
-			_add_type_icon(inherits);
+			_add_type_icon(inherits, theme_cache.doc_font_size, "ArrowRight");
 			class_desc->add_text(non_breaking_space); // Otherwise icon borrows hyperlink from _add_type().
 			_add_type(inherits);
 
@@ -709,7 +701,7 @@ void EditorHelp::_update_doc() {
 				if (prev) {
 					class_desc->add_text(" , ");
 				}
-				_add_type_icon(E.value.name);
+				_add_type_icon(E.value.name, theme_cache.doc_font_size, "ArrowRight");
 				class_desc->add_text(non_breaking_space); // Otherwise icon borrows hyperlink from _add_type().
 				_add_type(E.value.name);
 				prev = true;
@@ -1540,6 +1532,10 @@ void EditorHelp::_update_doc() {
 			if (cd.properties[i].overridden) {
 				continue;
 			}
+			// Ignore undocumented private.
+			if (cd.properties[i].name.begins_with("_") && cd.properties[i].description.strip_edges().is_empty()) {
+				continue;
+			}
 
 			property_line[cd.properties[i].name] = class_desc->get_paragraph_count() - 2;
 
@@ -2339,6 +2335,7 @@ EditorHelp::EditorHelp() {
 	status_bar->add_child(toggle_scripts_button);
 
 	class_desc->set_selection_enabled(true);
+	class_desc->set_context_menu_enabled(true);
 
 	class_desc->hide();
 }

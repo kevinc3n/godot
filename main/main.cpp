@@ -108,6 +108,10 @@
 
 #include "modules/modules_enabled.gen.h" // For mono.
 
+#if defined(MODULE_MONO_ENABLED) && defined(TOOLS_ENABLED)
+#include "modules/mono/editor/bindings_generator.h"
+#endif
+
 /* Static members */
 
 // Singletons
@@ -312,7 +316,6 @@ void finalize_navigation_server() {
 
 void initialize_theme_db() {
 	theme_db = memnew(ThemeDB);
-	theme_db->initialize_theme();
 }
 
 void finalize_theme_db() {
@@ -532,6 +535,7 @@ Error Main::test_setup() {
 
 	// Theme needs modules to be initialized so that sub-resources can be loaded.
 	initialize_theme_db();
+	theme_db->initialize_theme();
 	register_scene_singletons();
 
 	ERR_FAIL_COND_V(TextServerManager::get_singleton()->get_interface_count() == 0, ERR_CANT_CREATE);
@@ -1131,6 +1135,9 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			cmdline_tool = true;
 			main_args.push_back(I->get());
 #ifndef DISABLE_DEPRECATED
+		} else if (I->get() == "--export") { // For users used to 3.x syntax.
+			OS::get_singleton()->print("The Godot 3 --export option was changed to more explicit --export-release / --export-debug / --export-pack options.\nSee the --help output for details.\n");
+			goto error;
 		} else if (I->get() == "--convert-3to4") {
 			// Actually handling is done in start().
 			cmdline_tool = true;
@@ -1813,7 +1820,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		window_orientation = DisplayServer::ScreenOrientation(int(GLOBAL_DEF_BASIC("display/window/handheld/orientation", DisplayServer::ScreenOrientation::SCREEN_LANDSCAPE)));
 	}
 	{
-		window_vsync_mode = DisplayServer::VSyncMode(int(GLOBAL_DEF("display/window/vsync/vsync_mode", DisplayServer::VSyncMode::VSYNC_ENABLED)));
+		window_vsync_mode = DisplayServer::VSyncMode(int(GLOBAL_DEF_BASIC("display/window/vsync/vsync_mode", DisplayServer::VSyncMode::VSYNC_ENABLED)));
 		if (disable_vsync) {
 			window_vsync_mode = DisplayServer::VSyncMode::VSYNC_DISABLED;
 		}
@@ -1843,7 +1850,6 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	GLOBAL_DEF("display/window/ios/hide_home_indicator", true);
 	GLOBAL_DEF("display/window/ios/hide_status_bar", true);
 	GLOBAL_DEF("display/window/ios/suppress_ui_gesture", true);
-	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "input_devices/pointing/ios/touch_delay", PROPERTY_HINT_RANGE, "0,1,0.001"), 0.15);
 
 	// XR project settings.
 	GLOBAL_DEF_RST_BASIC("xr/openxr/enabled", false);
@@ -1853,6 +1859,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	GLOBAL_DEF_BASIC(PropertyInfo(Variant::INT, "xr/openxr/reference_space", PROPERTY_HINT_ENUM, "Local,Stage"), "1");
 
 	GLOBAL_DEF_BASIC("xr/openxr/submit_depth_buffer", false);
+	GLOBAL_DEF_BASIC("xr/openxr/startup_alert", true);
 
 #ifdef TOOLS_ENABLED
 	// Disabled for now, using XR inside of the editor we'll be working on during the coming months.
@@ -2195,7 +2202,7 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	RenderingServer::get_singleton()->set_default_clear_color(
 			GLOBAL_GET("rendering/environment/defaults/default_clear_color"));
 
-	GLOBAL_DEF(PropertyInfo(Variant::STRING, "application/config/icon", PROPERTY_HINT_FILE, "*.png,*.webp,*.svg"), String());
+	GLOBAL_DEF_BASIC(PropertyInfo(Variant::STRING, "application/config/icon", PROPERTY_HINT_FILE, "*.png,*.webp,*.svg"), String());
 	GLOBAL_DEF(PropertyInfo(Variant::STRING, "application/config/macos_native_icon", PROPERTY_HINT_FILE, "*.icns"), String());
 	GLOBAL_DEF(PropertyInfo(Variant::STRING, "application/config/windows_native_icon", PROPERTY_HINT_FILE, "*.ico"), String());
 
@@ -2312,6 +2319,7 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	register_platform_apis();
 
 	// Theme needs modules to be initialized so that sub-resources can be loaded.
+	// Default theme is initialized later, after ScriptServer is ready.
 	initialize_theme_db();
 	register_scene_singletons();
 
@@ -2339,7 +2347,17 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	// This loads global classes, so it must happen before custom loaders and savers are registered
 	ScriptServer::init_languages();
 
+	theme_db->initialize_theme();
 	audio_server->load_default_bus_layout();
+
+#if defined(MODULE_MONO_ENABLED) && defined(TOOLS_ENABLED)
+	// Hacky to have it here, but we don't have good facility yet to let modules
+	// register command line options to call at the right time. This needs to happen
+	// after init'ing the ScriptServer, but also after init'ing the ThemeDB,
+	// for the C# docs generation in the bindings.
+	List<String> cmdline_args = OS::get_singleton()->get_cmdline_args();
+	BindingsGenerator::handle_cmdline_args(cmdline_args);
+#endif
 
 	if (use_debug_profiler && EngineDebugger::is_active()) {
 		// Start the "scripts" profiler, used in local debugging.
@@ -2613,7 +2631,7 @@ bool Main::start() {
 	if (editor) {
 		main_loop = memnew(SceneTree);
 	}
-	String main_loop_type = GLOBAL_DEF("application/run/main_loop_type", "SceneTree");
+	String main_loop_type = GLOBAL_GET("application/run/main_loop_type");
 
 	if (!script.is_empty()) {
 		Ref<Script> script_res = ResourceLoader::load(script);
@@ -2704,7 +2722,7 @@ bool Main::start() {
 		}
 #endif
 
-		bool embed_subwindows = GLOBAL_DEF("display/window/subwindows/embed_subwindows", true);
+		bool embed_subwindows = GLOBAL_GET("display/window/subwindows/embed_subwindows");
 
 		if (single_window || (!project_manager && !editor && embed_subwindows) || !DisplayServer::get_singleton()->has_feature(DisplayServer::Feature::FEATURE_SUBWINDOWS)) {
 			sml->get_root()->set_embedding_subwindows(true);
@@ -2806,16 +2824,8 @@ bool Main::start() {
 			startup_benchmark_file = String();
 		}
 #endif
-		GLOBAL_DEF_BASIC(PropertyInfo(Variant::STRING, "display/window/stretch/mode", PROPERTY_HINT_ENUM, "disabled,canvas_items,viewport"), "disabled");
-		GLOBAL_DEF_BASIC(PropertyInfo(Variant::STRING, "display/window/stretch/aspect", PROPERTY_HINT_ENUM, "ignore,keep,keep_width,keep_height,expand"), "keep");
-		GLOBAL_DEF_BASIC(PropertyInfo(Variant::FLOAT, "display/window/stretch/scale", PROPERTY_HINT_RANGE, "0.5,8.0,0.01"), 1.0);
-		sml->set_auto_accept_quit(GLOBAL_DEF("application/config/auto_accept_quit", true));
-		sml->set_quit_on_go_back(GLOBAL_DEF("application/config/quit_on_go_back", true));
-		GLOBAL_DEF_BASIC("gui/common/snap_controls_to_pixels", true);
-		GLOBAL_DEF_BASIC("gui/fonts/dynamic_fonts/use_oversampling", true);
-
-		GLOBAL_DEF_BASIC(PropertyInfo(Variant::INT, "rendering/textures/canvas_textures/default_texture_filter", PROPERTY_HINT_ENUM, "Nearest,Linear,Linear Mipmap,Nearest Mipmap"), 1);
-		GLOBAL_DEF_BASIC(PropertyInfo(Variant::INT, "rendering/textures/canvas_textures/default_texture_repeat", PROPERTY_HINT_ENUM, "Disable,Enable,Mirror"), 0);
+		sml->set_auto_accept_quit(GLOBAL_GET("application/config/auto_accept_quit"));
+		sml->set_quit_on_go_back(GLOBAL_GET("application/config/quit_on_go_back"));
 
 		if (!editor && !project_manager) {
 			//standard helpers that can be changed from main config

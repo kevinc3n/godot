@@ -97,6 +97,7 @@ public:
 
 private:
 	DisplayServer::WindowID window_id = DisplayServer::INVALID_WINDOW_ID;
+	bool initialized = false;
 
 	String title;
 	mutable int current_screen = 0;
@@ -192,7 +193,6 @@ private:
 	Ref<Shortcut> debugger_stop_shortcut;
 
 protected:
-	Viewport *_get_embedder() const;
 	virtual Rect2i _popup_adjust_rect() const { return Rect2i(); }
 
 	virtual void _update_theme_item_cache();
@@ -278,6 +278,7 @@ public:
 	void set_ime_position(const Point2i &p_pos);
 
 	bool is_embedded() const;
+	Viewport *get_embedder() const;
 
 	void set_content_scale_size(const Size2i &p_size);
 	Size2i get_content_scale_size() const;
@@ -310,6 +311,7 @@ public:
 	void popup_centered(const Size2i &p_minsize = Size2i());
 	void popup_centered_clamped(const Size2i &p_size = Size2i(), float p_fallback_ratio = 0.75);
 
+	Rect2i fit_rect_in_parent(Rect2i p_rect, const Rect2i &p_parent_rect) const;
 	Size2 get_contents_minimum_size() const;
 	Size2 get_clamped_minimum_size() const;
 

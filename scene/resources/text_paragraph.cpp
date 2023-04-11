@@ -134,6 +134,18 @@ void TextParagraph::_bind_methods() {
 }
 
 void TextParagraph::_shape_lines() {
+	// When a shaped text is invalidated by an external source, we want to reshape it.
+	if (!TS->shaped_text_is_ready(rid) || !TS->shaped_text_is_ready(dropcap_rid)) {
+		lines_dirty = true;
+	}
+
+	for (const RID &line_rid : lines_rid) {
+		if (!TS->shaped_text_is_ready(line_rid)) {
+			lines_dirty = true;
+			break;
+		}
+	}
+
 	if (lines_dirty) {
 		for (const RID &line_rid : lines_rid) {
 			TS->free_rid(line_rid);
@@ -221,27 +233,27 @@ void TextParagraph::_shape_lines() {
 			}
 			if (alignment == HORIZONTAL_ALIGNMENT_FILL) {
 				for (int i = 0; i < (int)lines_rid.size(); i++) {
+					float line_w = (i <= dropcap_lines) ? (width - h_offset) : width;
 					if (i < visible_lines - 1 || (int)lines_rid.size() == 1) {
-						TS->shaped_text_fit_to_width(lines_rid[i], width, jst_flags);
+						TS->shaped_text_fit_to_width(lines_rid[i], line_w, jst_flags);
 					} else if (i == (visible_lines - 1)) {
-						TS->shaped_text_overrun_trim_to_width(lines_rid[visible_lines - 1], width, overrun_flags);
+						TS->shaped_text_overrun_trim_to_width(lines_rid[visible_lines - 1], line_w, overrun_flags);
 					}
 				}
-
 			} else if (lines_hidden) {
-				TS->shaped_text_overrun_trim_to_width(lines_rid[visible_lines - 1], width, overrun_flags);
+				TS->shaped_text_overrun_trim_to_width(lines_rid[visible_lines - 1], (visible_lines - 1 <= dropcap_lines) ? (width - h_offset) : width, overrun_flags);
 			}
-
 		} else {
 			// Autowrap disabled.
-			for (const RID &line_rid : lines_rid) {
+			for (int i = 0; i < (int)lines_rid.size(); i++) {
+				float line_w = (i <= dropcap_lines) ? (width - h_offset) : width;
 				if (alignment == HORIZONTAL_ALIGNMENT_FILL) {
-					TS->shaped_text_fit_to_width(line_rid, width, jst_flags);
+					TS->shaped_text_fit_to_width(lines_rid[i], line_w, jst_flags);
 					overrun_flags.set_flag(TextServer::OVERRUN_JUSTIFICATION_AWARE);
-					TS->shaped_text_overrun_trim_to_width(line_rid, width, overrun_flags);
-					TS->shaped_text_fit_to_width(line_rid, width, jst_flags | TextServer::JUSTIFICATION_CONSTRAIN_ELLIPSIS);
+					TS->shaped_text_overrun_trim_to_width(lines_rid[i], line_w, overrun_flags);
+					TS->shaped_text_fit_to_width(lines_rid[i], line_w, jst_flags | TextServer::JUSTIFICATION_CONSTRAIN_ELLIPSIS);
 				} else {
-					TS->shaped_text_overrun_trim_to_width(line_rid, width, overrun_flags);
+					TS->shaped_text_overrun_trim_to_width(lines_rid[i], line_w, overrun_flags);
 				}
 			}
 		}

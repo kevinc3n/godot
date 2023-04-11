@@ -111,7 +111,7 @@ For more information on learning Godot, please visit the [documentation site](ht
 
 ## <u> Documentation and Demos </u>
 
-The official documentation is hosted on [ReadTheDocs](https://docs.godotengine.org).
+The official documentation is hosted on [Read the Docs](https://docs.godotengine.org).
 It is maintained by the Godot community in its own [GitHub repository](https://github.com/godotengine/godot-docs).
 
 The [class reference](https://docs.godotengine.org/en/latest/classes/)

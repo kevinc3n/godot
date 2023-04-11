@@ -70,6 +70,11 @@ Files extracted from upstream source:
 
 - all .cpp, .h, and .txt files except the folders MakeTables and etc2packer.
 
+Changes related to BC6H packing and unpacking made upstream in
+https://github.com/elasota/cvtt/commit/2e4b6b2747aec11f4cc6dd09ef43fa8ce769f6e2
+have been removed as they caused massive quality regressions. Apply the patches
+in the `patches/` folder when syncing on newer upstream commits.
+
 
 ## doctest
 
@@ -243,13 +248,15 @@ Files extracted from upstream source:
 ## harfbuzz
 
 - Upstream: https://github.com/harfbuzz/harfbuzz
-- Version: 6.0.0 (afcae83a064843d71d47624bc162e121cc56c08b, 2022)
+- Version: 7.1.0 (60841e26187576bff477c1a09ee2ffe544844abc, 2023)
 - License: MIT
 
 Files extracted from upstream source:
 
-- the `src` folder
 - `AUTHORS`, `COPYING`, `THANKS`
+- from the `src` folder, recursively
+  - all the `*.c`, `*.cc`, `*.h`, `*.hh` files
+  - _except_ `main.cc`, `harfbuzz*.cc`, `failing-alloc.c`, `test*.cc`
 
 
 ## icu4c
@@ -681,7 +688,7 @@ instead of `miniz.h` as an external dependency.
 ## thorvg
 
 - Upstream: https://github.com/Samsung/thorvg
-- Version: 0.8.3 (a0fcf51f80a75f63a066df085f60cdaf715188b6, 2022)
+- Version: 0.8.4 (b0b7f207c6235691d694fc3f76e0b96e4858e606, 2023)
 - License: MIT
 
 Files extracted from upstream source:

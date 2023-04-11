@@ -165,7 +165,50 @@ ViewportTexture::~ViewportTexture() {
 	}
 }
 
+void Viewport::_process_dirty_canvas_parent_orders() {
+	for (const ObjectID &id : gui.canvas_parents_with_dirty_order) {
+		Object *obj = ObjectDB::get_instance(id);
+		if (!obj) {
+			continue; // May have been deleted.
+		}
+
+		Node *n = static_cast<Node *>(obj);
+		for (int i = 0; i < n->get_child_count(); i++) {
+			Node *c = n->get_child(i);
+			CanvasItem *ci = Object::cast_to<CanvasItem>(c);
+			if (ci) {
+				ci->update_draw_order();
+				continue;
+			}
+			CanvasLayer *cl = Object::cast_to<CanvasLayer>(c);
+			if (cl) {
+				cl->update_draw_order();
+			}
+		}
+	}
+
+	gui.canvas_parents_with_dirty_order.clear();
+}
+
 void Viewport::_sub_window_update_order() {
+	if (gui.sub_windows.size() < 2) {
+		return;
+	}
+
+	if (!gui.sub_windows[gui.sub_windows.size() - 1].window->get_flag(Window::FLAG_ALWAYS_ON_TOP)) {
+		int index = gui.sub_windows.size() - 1;
+
+		while (index > 0 && gui.sub_windows[index - 1].window->get_flag(Window::FLAG_ALWAYS_ON_TOP)) {
+			--index;
+		}
+
+		if (index != (gui.sub_windows.size() - 1)) {
+			SubWindow sw = gui.sub_windows[gui.sub_windows.size() - 1];
+			gui.sub_windows.remove_at(gui.sub_windows.size() - 1);
+			gui.sub_windows.insert(index, sw);
+		}
+	}
+
 	for (int i = 0; i < gui.sub_windows.size(); i++) {
 		RS::get_singleton()->canvas_item_set_draw_index(gui.sub_windows[i].canvas_item, i);
 	}
@@ -857,6 +900,17 @@ void Viewport::_set_size(const Size2i &p_size, const Size2i &p_size_2d_override,
 	}
 
 	emit_signal(SNAME("size_changed"));
+
+	Rect2i limit = get_visible_rect();
+	for (int i = 0; i < gui.sub_windows.size(); ++i) {
+		Window *sw = gui.sub_windows[i].window;
+		Rect2i rect = Rect2i(sw->position, sw->size);
+		Rect2i new_rect = sw->fit_rect_in_parent(rect, limit);
+		if (new_rect != rect) {
+			sw->set_position(new_rect.position);
+			sw->set_size(new_rect.size);
+		}
+	}
 }
 
 Size2i Viewport::_get_size() const {
@@ -898,6 +952,14 @@ Rect2 Viewport::get_visible_rect() const {
 	}
 
 	return r;
+}
+
+void Viewport::canvas_parent_mark_dirty(Node *p_node) {
+	bool request_update = gui.canvas_parents_with_dirty_order.is_empty();
+	gui.canvas_parents_with_dirty_order.insert(p_node->get_instance_id());
+	if (request_update) {
+		MessageQueue::get_singleton()->push_callable(callable_mp(this, &Viewport::_process_dirty_canvas_parent_orders));
+	}
 }
 
 void Viewport::_update_audio_listener_2d() {
@@ -1312,7 +1374,7 @@ void Viewport::_gui_show_tooltip() {
 	Window *window = gui.tooltip_popup->get_parent_visible_window();
 	Rect2i vr;
 	if (gui.tooltip_popup->is_embedded()) {
-		vr = gui.tooltip_popup->_get_embedder()->get_visible_rect();
+		vr = gui.tooltip_popup->get_embedder()->get_visible_rect();
 	} else {
 		vr = window->get_usable_parent_rect();
 	}
@@ -1833,7 +1895,7 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 				Window *w = Object::cast_to<Window>(this);
 				if (w) {
 					if (w->is_embedded()) {
-						embedder = w->_get_embedder();
+						embedder = w->get_embedder();
 
 						viewport_pos = get_final_transform().xform(mpos) + w->get_position(); // To parent coords.
 					}
@@ -2535,23 +2597,7 @@ bool Viewport::_sub_windows_forward_input(const Ref<InputEvent> &p_event) {
 				Rect2i new_rect(gui.subwindow_drag_pos + diff, gui.subwindow_focused->get_size());
 
 				if (gui.subwindow_focused->is_clamped_to_embedder()) {
-					Size2i limit = get_visible_rect().size;
-					if (new_rect.position.x + new_rect.size.x > limit.x) {
-						new_rect.position.x = limit.x - new_rect.size.x;
-					}
-					if (new_rect.position.y + new_rect.size.y > limit.y) {
-						new_rect.position.y = limit.y - new_rect.size.y;
-					}
-
-					if (new_rect.position.x < 0) {
-						new_rect.position.x = 0;
-					}
-
-					int title_height = gui.subwindow_focused->get_flag(Window::FLAG_BORDERLESS) ? 0 : gui.subwindow_focused->get_theme_constant(SNAME("title_height"));
-
-					if (new_rect.position.y < title_height) {
-						new_rect.position.y = title_height;
-					}
+					new_rect = gui.subwindow_focused->fit_rect_in_parent(new_rect, get_visible_rect());
 				}
 
 				gui.subwindow_focused->_rect_changed_callback(new_rect);
@@ -4263,6 +4309,11 @@ void SubViewport::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 			RS::get_singleton()->viewport_set_active(get_viewport_rid(), true);
+
+			SubViewportContainer *parent_svc = Object::cast_to<SubViewportContainer>(get_parent());
+			if (parent_svc) {
+				parent_svc->recalc_force_viewport_sizes();
+			}
 		} break;
 
 		case NOTIFICATION_EXIT_TREE: {
@@ -4303,6 +4354,17 @@ void SubViewport::_bind_methods() {
 	BIND_ENUM_CONSTANT(UPDATE_WHEN_VISIBLE);
 	BIND_ENUM_CONSTANT(UPDATE_WHEN_PARENT_VISIBLE);
 	BIND_ENUM_CONSTANT(UPDATE_ALWAYS);
+}
+
+void SubViewport::_validate_property(PropertyInfo &p_property) const {
+	if (p_property.name == "size") {
+		SubViewportContainer *parent_svc = Object::cast_to<SubViewportContainer>(get_parent());
+		if (parent_svc && parent_svc->is_stretch_enabled()) {
+			p_property.usage = PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_READ_ONLY;
+		} else {
+			p_property.usage = PROPERTY_USAGE_DEFAULT;
+		}
+	}
 }
 
 SubViewport::SubViewport() {

@@ -878,6 +878,8 @@ void SceneTreeEditor::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_THEME_CHANGED: {
+			tree->add_theme_constant_override("icon_max_width", get_theme_constant(SNAME("class_icon_size"), SNAME("Editor")));
+
 			_update_tree();
 		} break;
 	}
@@ -981,7 +983,7 @@ void SceneTreeEditor::_renamed() {
 	String new_name = raw_new_name.validate_node_name();
 
 	if (new_name != raw_new_name) {
-		error->set_text(TTR("Invalid node name, the following characters are not allowed:") + "\n" + String::invalid_node_name_characters);
+		error->set_text(TTR("Invalid node name, the following characters are not allowed:") + "\n" + String::get_invalid_node_name_characters());
 		error->popup_centered();
 
 		if (new_name.is_empty()) {
@@ -1016,7 +1018,7 @@ void SceneTreeEditor::_renamed() {
 		emit_signal(SNAME("node_renamed"));
 	} else {
 		EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
-		undo_redo->create_action(TTR("Rename Node"));
+		undo_redo->create_action(TTR("Rename Node"), UndoRedo::MERGE_DISABLE, n);
 		emit_signal(SNAME("node_prerename"), n, new_name);
 		undo_redo->add_do_method(this, "_rename_node", n->get_instance_id(), new_name);
 		undo_redo->add_undo_method(this, "_rename_node", n->get_instance_id(), n->get_name());

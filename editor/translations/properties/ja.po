@@ -52,8 +52,8 @@ msgstr ""
 "Project-Id-Version: Godot Engine properties\n"
 "Report-Msgid-Bugs-To: https://github.com/godotengine/godot\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2023-02-10 00:55+0000\n"
-"Last-Translator: Saitos <purifyzombie@gmail.com>\n"
+"PO-Revision-Date: 2023-03-14 09:33+0000\n"
+"Last-Translator: Kenryu Shibata <kenryushibata@gmail.com>\n"
 "Language-Team: Japanese <https://hosted.weblate.org/projects/godot-engine/"
 "godot-properties/ja/>\n"
 "Language: ja\n"
@@ -61,7 +61,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Weblate 4.16-dev\n"
+"X-Generator: Weblate 4.16.2-dev\n"
 
 msgid "Application"
 msgstr "アプリケーション"
@@ -71,6 +71,9 @@ msgstr "構成"
 
 msgid "Name"
 msgstr "名前"
+
+msgid "Name Localized"
+msgstr "ローカライズされた名前"
 
 msgid "Description"
 msgstr "説明"
@@ -99,6 +102,12 @@ msgstr "カスタムユーザフォルダ名"
 msgid "Project Settings Override"
 msgstr "プロジェクト設定のオーバーライド"
 
+msgid "Main Loop Type"
+msgstr "メインループのタイプ"
+
+msgid "Auto Accept Quit"
+msgstr "プログラム終了を自動的に受け入れる"
+
 msgid "Display"
 msgstr "表示"
 
@@ -108,14 +117,35 @@ msgstr "ウィンドウ"
 msgid "Size"
 msgstr "サイズ"
 
+msgid "Viewport Width"
+msgstr "ビューポートの幅"
+
+msgid "Viewport Height"
+msgstr "ビューポートの高さ"
+
 msgid "Mode"
 msgstr "モード"
+
+msgid "Initial Position Type"
+msgstr "初期位置タイプ"
+
+msgid "Initial Position"
+msgstr "初期位置"
+
+msgid "Initial Screen"
+msgstr "初期スクリーン"
 
 msgid "Resizable"
 msgstr "サイズを変更可能"
 
 msgid "Borderless"
 msgstr "ボーダーレス"
+
+msgid "Always on Top"
+msgstr "画面を常に最前面にする"
+
+msgid "Transparent"
+msgstr "透明"
 
 msgid "Energy Saving"
 msgstr "省エネルギー"
@@ -129,9 +159,6 @@ msgstr "オーディオ"
 msgid "Editor"
 msgstr "エディター"
 
-msgid "Main Run Args"
-msgstr "メイン実行引数"
-
 msgid "Physics"
 msgstr "物理"
 
@@ -140,6 +167,15 @@ msgstr "2D"
 
 msgid "3D"
 msgstr "3D"
+
+msgid "Stretch"
+msgstr "ストレッチ"
+
+msgid "Aspect"
+msgstr "アスペクト"
+
+msgid "Scale"
+msgstr "スケール"
 
 msgid "Debug"
 msgstr "デバッグ"
@@ -171,11 +207,26 @@ msgstr "レイアウト方向を右から左に強制"
 msgid "GUI"
 msgstr "GUI"
 
+msgid "Common"
+msgstr "一般"
+
+msgid "Fonts"
+msgstr "フォント"
+
+msgid "Dynamic Fonts"
+msgstr "ダイナミックフォント"
+
+msgid "Use Oversampling"
+msgstr "オーバーサンプリングを使用"
+
 msgid "Vulkan"
 msgstr "Vulkan"
 
 msgid "Max Descriptors per Pool"
 msgstr "プールあたりの最大記述子数"
+
+msgid "Textures"
+msgstr "テクスチャ"
 
 msgid "Low Processor Usage Mode"
 msgstr "プロセッサー低使用率モード"
@@ -294,9 +345,6 @@ msgstr "ページサイズ"
 msgid "Blocking Mode Enabled"
 msgstr "ブロッキングモードを有効化"
 
-msgid "Connection"
-msgstr "接続"
-
 msgid "Read Chunk Size"
 msgstr "読み取りチャンクサイズ"
 
@@ -314,9 +362,6 @@ msgstr "入力バッファの上限サイズ"
 
 msgid "Output Buffer Max Size"
 msgstr "出力バッファの上限サイズ"
-
-msgid "Stream Peer"
-msgstr "ストリーム ピア"
 
 msgid "Resource"
 msgstr "リソース"
@@ -341,9 +386,6 @@ msgstr "シード値"
 
 msgid "State"
 msgstr "状態"
-
-msgid "Source Code"
-msgstr "ソースコード"
 
 msgid "TLS"
 msgstr "TLS"
@@ -374,9 +416,6 @@ msgstr "上書き"
 
 msgid "Rotation"
 msgstr "回転"
-
-msgid "Scale"
-msgstr "スケール"
 
 msgid "Value"
 msgstr "値"
@@ -429,26 +468,14 @@ msgstr "アクセス"
 msgid "Display Mode"
 msgstr "表示モード"
 
-msgid "Current Dir"
-msgstr "現在のディレクトリ"
-
-msgid "Current File"
-msgstr "現在のファイル"
-
-msgid "Current Path"
-msgstr "現在のパス"
+msgid "Filters"
+msgstr "フィルター"
 
 msgid "Show Hidden Files"
 msgstr "隠しファイルを表示"
 
 msgid "Disable Overwrite Warning"
 msgstr "上書きの警告を無効化"
-
-msgid "Import"
-msgstr "インポート"
-
-msgid "Reimport Missing Imported Files"
-msgstr "見つからないインポート済みファイルを再インポートする"
 
 msgid "Text Editor"
 msgstr "テキストエディター"
@@ -519,17 +546,11 @@ msgstr "集中モード"
 msgid "Base Type"
 msgstr "基底型"
 
-msgid "Edited Resource"
-msgstr "編集したリソース"
-
 msgid "Editable"
 msgstr "編集可能"
 
 msgid "Toggle Mode"
 msgstr "モード切り替え"
-
-msgid "Script Owner"
-msgstr "スクリプトのオーナー"
 
 msgid "Editor Language"
 msgstr "エディターの言語"
@@ -1188,9 +1209,6 @@ msgstr "スライダーを隠す"
 msgid "Zoom"
 msgstr "ズーム"
 
-msgid "Export"
-msgstr "エクスポート"
-
 msgid "Custom Template"
 msgstr "カスタムテンプレート"
 
@@ -1218,8 +1236,8 @@ msgstr "ETC"
 msgid "ETC2"
 msgstr "ETC2"
 
-msgid "No BPTC Fallbacks"
-msgstr "BPTCにフォールバックしない"
+msgid "Export"
+msgstr "エクスポート"
 
 msgid "Export Path"
 msgstr "エクスポート先のパス"
@@ -1313,6 +1331,9 @@ msgstr "スケールメッシュ"
 
 msgid "Offset Mesh"
 msgstr "メッシュのオフセット"
+
+msgid "Import"
+msgstr "インポート"
 
 msgid "Advanced"
 msgstr "高度な設定"
@@ -1503,6 +1524,15 @@ msgstr "警告"
 msgid "ID"
 msgstr "ID"
 
+msgid "Texture"
+msgstr "テクスチャ"
+
+msgid "Separation"
+msgstr "分離"
+
+msgid "Speed"
+msgstr "速さ"
+
 msgid "Version Control"
 msgstr "バージョンコントロール"
 
@@ -1514,6 +1544,12 @@ msgstr "SSH 公開鍵パス"
 
 msgid "SSH Private Key Path"
 msgstr "SSH 秘密鍵パス"
+
+msgid "Main Run Args"
+msgstr "メイン実行引数"
+
+msgid "Reimport Missing Imported Files"
+msgstr "見つからないインポート済みファイルを再インポートする"
 
 msgid "Show Scene Tree Root Selection"
 msgstr "シーンツリーのルート選択対象を表示"
@@ -1560,9 +1596,6 @@ msgstr "方向"
 msgid "V-Sync"
 msgstr "垂直同期"
 
-msgid "Common"
-msgstr "一般"
-
 msgid "stdout"
 msgstr "stdout"
 
@@ -1581,12 +1614,6 @@ msgstr "iOS"
 msgid "Hide Home Indicator"
 msgstr "ホームインジケーターを隠す"
 
-msgid "Input Devices"
-msgstr "入力デバイス"
-
-msgid "Pointing"
-msgstr "ポインティング"
-
 msgid "XR"
 msgstr "XR"
 
@@ -1595,6 +1622,9 @@ msgstr "ブートスプラッシュ"
 
 msgid "BG Color"
 msgstr "背景色"
+
+msgid "Input Devices"
+msgstr "入力デバイス"
 
 msgid "Environment"
 msgstr "環境"
@@ -1623,6 +1653,9 @@ msgstr "バッファリング"
 msgid "Agile Event Flushing"
 msgstr "即座にイベントフラッシュ"
 
+msgid "Pointing"
+msgstr "ポインティング"
+
 msgid "Emulate Touch From Mouse"
 msgstr "マウスでタッチ操作をエミュレート"
 
@@ -1646,30 +1679,6 @@ msgstr "アセンブリ名"
 
 msgid "Solution Directory"
 msgstr "ソリューションのディレクトリ"
-
-msgid "Main Loop Type"
-msgstr "メインループのタイプ"
-
-msgid "Stretch"
-msgstr "ストレッチ"
-
-msgid "Aspect"
-msgstr "アスペクト"
-
-msgid "Auto Accept Quit"
-msgstr "プログラム終了を自動的に受け入れる"
-
-msgid "Fonts"
-msgstr "フォント"
-
-msgid "Dynamic Fonts"
-msgstr "ダイナミックフォント"
-
-msgid "Use Oversampling"
-msgstr "オーバーサンプリングを使用"
-
-msgid "Textures"
-msgstr "テクスチャ"
 
 msgid "Operation"
 msgstr "操作"
@@ -2304,9 +2313,6 @@ msgstr "コピーモード"
 msgid "Anchor Mode"
 msgstr "アンカーモード"
 
-msgid "Custom Viewport"
-msgstr "カスタムビューポート"
-
 msgid "Left"
 msgstr "左"
 
@@ -2321,9 +2327,6 @@ msgstr "下"
 
 msgid "Smoothed"
 msgstr "スムージング"
-
-msgid "Speed"
-msgstr "速さ"
 
 msgid "Draw Screen"
 msgstr "スクリーンを描画する"
@@ -2363,9 +2366,6 @@ msgstr "ランダム性"
 
 msgid "Lifetime Randomness"
 msgstr "生存時間のランダム性"
-
-msgid "Texture"
-msgstr "テクスチャ"
 
 msgid "Points"
 msgstr "点"
@@ -2435,12 +2435,6 @@ msgstr "ボーダー"
 
 msgid "Round Precision"
 msgstr "丸め精度"
-
-msgid "Rotation Degrees"
-msgstr "回転角度"
-
-msgid "Global Rotation Degrees"
-msgstr "グローバル回転角度"
 
 msgid "Ignore Camera Zoom"
 msgstr "カメラのズームを無視"
@@ -2611,7 +2605,7 @@ msgid "Use AABB Center"
 msgstr "AABBセンターを使用"
 
 msgid "End"
-msgstr "終り"
+msgstr "End"
 
 msgid "Sync"
 msgstr "同期"
@@ -2655,9 +2649,6 @@ msgstr "前"
 msgid "Default Cursor Shape"
 msgstr "デフォルトのカーソル形状"
 
-msgid "Filters"
-msgstr "フィルター"
-
 msgid "Use Snap"
 msgstr "スナップを使用"
 
@@ -2691,9 +2682,6 @@ msgstr "ドラッグして再配置可能"
 msgid "Syntax Highlighter"
 msgstr "シンタックスハイライト"
 
-msgid "Volume"
-msgstr "ボリューム"
-
 msgid "Z Index"
 msgstr "Zインデックス"
 
@@ -2714,9 +2702,6 @@ msgstr "転送モード"
 
 msgid "Transfer Channel"
 msgstr "転送チャンネル"
-
-msgid "Current Scene"
-msgstr "現在のシーン"
 
 msgid "Screen Space AA"
 msgstr "スクリーンスペースAA"
@@ -2780,9 +2765,6 @@ msgstr "サブメニュー"
 
 msgid "Font Separator"
 msgstr "フォントセパレータ"
-
-msgid "Separation"
-msgstr "分離"
 
 msgid "Cursor"
 msgstr "カーソル"
@@ -2849,9 +2831,6 @@ msgstr "プレビュー"
 
 msgid "Transform Format"
 msgstr "変換形式"
-
-msgid "Transform Array"
-msgstr "Transformの配列"
 
 msgid "Parsed Geometry Type"
 msgstr "解析されたジオメトリ型"

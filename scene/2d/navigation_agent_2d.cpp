@@ -31,6 +31,7 @@
 #include "navigation_agent_2d.h"
 
 #include "core/math/geometry_2d.h"
+#include "scene/2d/navigation_link_2d.h"
 #include "scene/resources/world_2d.h"
 #include "servers/navigation_server_2d.h"
 
@@ -70,6 +71,12 @@ void NavigationAgent2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_navigation_layer_value", "layer_number", "value"), &NavigationAgent2D::set_navigation_layer_value);
 	ClassDB::bind_method(D_METHOD("get_navigation_layer_value", "layer_number"), &NavigationAgent2D::get_navigation_layer_value);
 
+	ClassDB::bind_method(D_METHOD("set_pathfinding_algorithm", "pathfinding_algorithm"), &NavigationAgent2D::set_pathfinding_algorithm);
+	ClassDB::bind_method(D_METHOD("get_pathfinding_algorithm"), &NavigationAgent2D::get_pathfinding_algorithm);
+
+	ClassDB::bind_method(D_METHOD("set_path_postprocessing", "path_postprocessing"), &NavigationAgent2D::set_path_postprocessing);
+	ClassDB::bind_method(D_METHOD("get_path_postprocessing"), &NavigationAgent2D::get_path_postprocessing);
+
 	ClassDB::bind_method(D_METHOD("set_path_metadata_flags", "flags"), &NavigationAgent2D::set_path_metadata_flags);
 	ClassDB::bind_method(D_METHOD("get_path_metadata_flags"), &NavigationAgent2D::get_path_metadata_flags);
 
@@ -94,19 +101,21 @@ void NavigationAgent2D::_bind_methods() {
 
 	ADD_GROUP("Pathfinding", "");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "target_position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_target_position", "get_target_position");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "path_desired_distance", PROPERTY_HINT_RANGE, "0.1,1000,0.01,suffix:px"), "set_path_desired_distance", "get_path_desired_distance");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "target_desired_distance", PROPERTY_HINT_RANGE, "0.1,1000,0.01,suffix:px"), "set_target_desired_distance", "get_target_desired_distance");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "path_max_distance", PROPERTY_HINT_RANGE, "10,1000,1,suffix:px"), "set_path_max_distance", "get_path_max_distance");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "path_desired_distance", PROPERTY_HINT_RANGE, "0.1,1000,0.01,or_greater,suffix:px"), "set_path_desired_distance", "get_path_desired_distance");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "target_desired_distance", PROPERTY_HINT_RANGE, "0.1,1000,0.01,or_greater,suffix:px"), "set_target_desired_distance", "get_target_desired_distance");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "path_max_distance", PROPERTY_HINT_RANGE, "10,1000,1,or_greater,suffix:px"), "set_path_max_distance", "get_path_max_distance");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "navigation_layers", PROPERTY_HINT_LAYERS_2D_NAVIGATION), "set_navigation_layers", "get_navigation_layers");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathfinding_algorithm", PROPERTY_HINT_ENUM, "AStar"), "set_pathfinding_algorithm", "get_pathfinding_algorithm");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "path_postprocessing", PROPERTY_HINT_ENUM, "Corridorfunnel,Edgecentered"), "set_path_postprocessing", "get_path_postprocessing");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "path_metadata_flags", PROPERTY_HINT_FLAGS, "Include Types,Include RIDs,Include Owners"), "set_path_metadata_flags", "get_path_metadata_flags");
 
 	ADD_GROUP("Avoidance", "");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "avoidance_enabled"), "set_avoidance_enabled", "get_avoidance_enabled");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "radius", PROPERTY_HINT_RANGE, "0.1,500,0.01,suffix:px"), "set_radius", "get_radius");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "neighbor_distance", PROPERTY_HINT_RANGE, "0.1,100000,0.01,suffix:px"), "set_neighbor_distance", "get_neighbor_distance");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "max_neighbors", PROPERTY_HINT_RANGE, "1,10000,1"), "set_max_neighbors", "get_max_neighbors");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "time_horizon", PROPERTY_HINT_RANGE, "0.1,10,0.01,suffix:s"), "set_time_horizon", "get_time_horizon");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_speed", PROPERTY_HINT_RANGE, "0.1,10000,0.01,suffix:px/s"), "set_max_speed", "get_max_speed");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "radius", PROPERTY_HINT_RANGE, "0.1,500,0.01,or_greater,suffix:px"), "set_radius", "get_radius");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "neighbor_distance", PROPERTY_HINT_RANGE, "0.1,100000,0.01,or_greater,suffix:px"), "set_neighbor_distance", "get_neighbor_distance");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "max_neighbors", PROPERTY_HINT_RANGE, "1,10000,or_greater,1"), "set_max_neighbors", "get_max_neighbors");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "time_horizon", PROPERTY_HINT_RANGE, "0.1,10,0.01,or_greater,suffix:s"), "set_time_horizon", "get_time_horizon");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_speed", PROPERTY_HINT_RANGE, "0.1,10000,0.01,or_greater,suffix:px/s"), "set_max_speed", "get_max_speed");
 
 	ClassDB::bind_method(D_METHOD("set_debug_enabled", "enabled"), &NavigationAgent2D::set_debug_enabled);
 	ClassDB::bind_method(D_METHOD("get_debug_enabled"), &NavigationAgent2D::get_debug_enabled);
@@ -123,8 +132,8 @@ void NavigationAgent2D::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "debug_enabled"), "set_debug_enabled", "get_debug_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "debug_use_custom"), "set_debug_use_custom", "get_debug_use_custom");
 	ADD_PROPERTY(PropertyInfo(Variant::COLOR, "debug_path_custom_color"), "set_debug_path_custom_color", "get_debug_path_custom_color");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "debug_path_custom_point_size", PROPERTY_HINT_RANGE, "1,50,1,suffix:px"), "set_debug_path_custom_point_size", "get_debug_path_custom_point_size");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "debug_path_custom_line_width", PROPERTY_HINT_RANGE, "1,50,1,suffix:px"), "set_debug_path_custom_line_width", "get_debug_path_custom_line_width");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "debug_path_custom_point_size", PROPERTY_HINT_RANGE, "0,50,0.01,or_greater,suffix:px"), "set_debug_path_custom_point_size", "get_debug_path_custom_point_size");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "debug_path_custom_line_width", PROPERTY_HINT_RANGE, "-1,50,0.01,or_greater,suffix:px"), "set_debug_path_custom_line_width", "get_debug_path_custom_line_width");
 
 	ADD_SIGNAL(MethodInfo("path_changed"));
 	ADD_SIGNAL(MethodInfo("target_reached"));
@@ -325,6 +334,26 @@ bool NavigationAgent2D::get_navigation_layer_value(int p_layer_number) const {
 	ERR_FAIL_COND_V_MSG(p_layer_number < 1, false, "Navigation layer number must be between 1 and 32 inclusive.");
 	ERR_FAIL_COND_V_MSG(p_layer_number > 32, false, "Navigation layer number must be between 1 and 32 inclusive.");
 	return get_navigation_layers() & (1 << (p_layer_number - 1));
+}
+
+void NavigationAgent2D::set_pathfinding_algorithm(const NavigationPathQueryParameters2D::PathfindingAlgorithm p_pathfinding_algorithm) {
+	if (pathfinding_algorithm == p_pathfinding_algorithm) {
+		return;
+	}
+
+	pathfinding_algorithm = p_pathfinding_algorithm;
+
+	navigation_query->set_pathfinding_algorithm(pathfinding_algorithm);
+}
+
+void NavigationAgent2D::set_path_postprocessing(const NavigationPathQueryParameters2D::PathPostProcessing p_path_postprocessing) {
+	if (path_postprocessing == p_path_postprocessing) {
+		return;
+	}
+
+	path_postprocessing = p_path_postprocessing;
+
+	navigation_query->set_path_postprocessing(path_postprocessing);
 }
 
 void NavigationAgent2D::set_path_metadata_flags(BitField<NavigationPathQueryParameters2D::PathMetadataFlags> p_path_metadata_flags) {
@@ -623,6 +652,21 @@ void NavigationAgent2D::update_navigation() {
 				}
 
 				details[SNAME("owner")] = owner;
+
+				if (waypoint_type == NavigationPathQueryResult2D::PATH_SEGMENT_TYPE_LINK) {
+					const NavigationLink2D *navlink = Object::cast_to<NavigationLink2D>(owner);
+					if (navlink) {
+						Vector2 link_global_start_position = navlink->get_global_start_position();
+						Vector2 link_global_end_position = navlink->get_global_end_position();
+						if (waypoint.distance_to(link_global_start_position) < waypoint.distance_to(link_global_end_position)) {
+							details[SNAME("link_entry_position")] = link_global_start_position;
+							details[SNAME("link_exit_position")] = link_global_end_position;
+						} else {
+							details[SNAME("link_entry_position")] = link_global_end_position;
+							details[SNAME("link_exit_position")] = link_global_start_position;
+						}
+					}
+				}
 			}
 
 			// Emit a signal for the waypoint
@@ -718,7 +762,7 @@ void NavigationAgent2D::set_debug_path_custom_point_size(float p_point_size) {
 		return;
 	}
 
-	debug_path_custom_point_size = MAX(0.1, p_point_size);
+	debug_path_custom_point_size = MAX(0.0, p_point_size);
 	debug_path_dirty = true;
 #endif // DEBUG_ENABLED
 }
@@ -786,6 +830,10 @@ void NavigationAgent2D::_update_debug_path() {
 	debug_path_colors.fill(debug_path_color);
 
 	RenderingServer::get_singleton()->canvas_item_add_polyline(debug_path_instance, navigation_path, debug_path_colors, debug_path_custom_line_width, false);
+
+	if (debug_path_custom_point_size <= 0.0) {
+		return;
+	}
 
 	float point_size = NavigationServer2D::get_singleton()->get_debug_navigation_agent_path_point_size();
 	float half_point_size = point_size * 0.5;

@@ -1709,8 +1709,11 @@ String VisualShaderNodeLinearSceneDepth::generate_code(Shader::Mode p_mode, Visu
 	code += "	{\n";
 
 	code += "		float __log_depth = textureLod(" + make_unique_id(p_type, p_id, "depth_tex") + ", SCREEN_UV, 0.0).x;\n";
-	code += "		vec3 __depth_ndc = vec3(SCREEN_UV * 2.0 - 1.0, __log_depth);\n";
-	code += "		vec4 __depth_view = INV_PROJECTION_MATRIX * vec4(__depth_ndc, 1.0);\n";
+	if (!RenderingServer::get_singleton()->is_low_end()) {
+		code += "	vec4 __depth_view = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, __log_depth, 1.0);\n";
+	} else {
+		code += "	vec4 __depth_view = INV_PROJECTION_MATRIX * vec4(vec3(SCREEN_UV, __log_depth) * 2.0 - 1.0, 1.0);\n";
+	}
 	code += "		__depth_view.xyz /= __depth_view.w;\n";
 	code += vformat("		%s = -__depth_view.z;\n", p_output_vars[0]);
 
@@ -7606,8 +7609,11 @@ String VisualShaderNodeBillboard::generate_code(Shader::Mode p_mode, VisualShade
 			break;
 		case BILLBOARD_TYPE_PARTICLES:
 			code += "	{\n";
-			code += "		mat4 __wm = mat4(normalize(INV_VIEW_MATRIX[0]) * length(MODEL_MATRIX[0]), normalize(INV_VIEW_MATRIX[1]) * length(MODEL_MATRIX[0]), normalize(INV_VIEW_MATRIX[2]) * length(MODEL_MATRIX[2]), MODEL_MATRIX[3]);\n";
+			code += "		mat4 __wm = mat4(normalize(INV_VIEW_MATRIX[0]), normalize(INV_VIEW_MATRIX[1]), normalize(INV_VIEW_MATRIX[2]), MODEL_MATRIX[3]);\n";
 			code += "		__wm = __wm * mat4(vec4(cos(INSTANCE_CUSTOM.x), -sin(INSTANCE_CUSTOM.x), 0.0, 0.0), vec4(sin(INSTANCE_CUSTOM.x), cos(INSTANCE_CUSTOM.x), 0.0, 0.0), vec4(0.0, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0));\n";
+			if (keep_scale) {
+				code += "		__wm = __wm * mat4(vec4(length(MODEL_MATRIX[0].xyz), 0.0, 0.0, 0.0), vec4(0.0, length(MODEL_MATRIX[1].xyz), 0.0, 0.0), vec4(0.0, 0.0, length(MODEL_MATRIX[2].xyz), 0.0), vec4(0.0, 0.0, 0.0, 1.0));\n";
+			}
 			code += "		" + p_output_vars[0] + " = VIEW_MATRIX * __wm;\n";
 			code += "	}\n";
 			break;
@@ -7650,7 +7656,7 @@ bool VisualShaderNodeBillboard::is_keep_scale_enabled() const {
 Vector<StringName> VisualShaderNodeBillboard::get_editable_properties() const {
 	Vector<StringName> props;
 	props.push_back("billboard_type");
-	if (billboard_type == BILLBOARD_TYPE_ENABLED || billboard_type == BILLBOARD_TYPE_FIXED_Y) {
+	if (billboard_type == BILLBOARD_TYPE_ENABLED || billboard_type == BILLBOARD_TYPE_FIXED_Y || billboard_type == BILLBOARD_TYPE_PARTICLES) {
 		props.push_back("keep_scale");
 	}
 	return props;

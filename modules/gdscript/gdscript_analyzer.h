@@ -98,8 +98,9 @@ class GDScriptAnalyzer {
 	void reduce_literal(GDScriptParser::LiteralNode *p_literal);
 	void reduce_preload(GDScriptParser::PreloadNode *p_preload);
 	void reduce_self(GDScriptParser::SelfNode *p_self);
-	void reduce_subscript(GDScriptParser::SubscriptNode *p_subscript);
+	void reduce_subscript(GDScriptParser::SubscriptNode *p_subscript, bool p_can_be_pseudo_type = false);
 	void reduce_ternary_op(GDScriptParser::TernaryOpNode *p_ternary_op, bool p_is_root = false);
+	void reduce_type_test(GDScriptParser::TypeTestNode *p_type_test);
 	void reduce_unary_op(GDScriptParser::UnaryOpNode *p_unary_op);
 
 	Variant make_expression_reduced_value(GDScriptParser::ExpressionNode *p_expression, bool &is_reduced);
@@ -130,7 +131,7 @@ class GDScriptAnalyzer {
 	Ref<GDScriptParserRef> get_parser_for(const String &p_path);
 	void reduce_identifier_from_base_set_class(GDScriptParser::IdentifierNode *p_identifier, GDScriptParser::DataType p_identifier_datatype);
 #ifdef DEBUG_ENABLED
-	bool is_shadowing(GDScriptParser::IdentifierNode *p_local, const String &p_context);
+	void is_shadowing(GDScriptParser::IdentifierNode *p_local, const String &p_context);
 #endif
 
 public:

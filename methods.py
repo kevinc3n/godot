@@ -732,7 +732,7 @@ def add_to_vs_project(env, sources):
                 env.vs_srcs += [basename + ".cpp"]
 
 
-def generate_vs_project(env, num_jobs):
+def generate_vs_project(env, num_jobs, project_name="godot"):
     batch_file = find_visual_c_batch_file(env)
     if batch_file:
 
@@ -783,7 +783,7 @@ def generate_vs_project(env, num_jobs):
                     for plat_id in ModuleConfigs.PLATFORM_IDS
                 ]
                 self.arg_dict["cpppaths"] += ModuleConfigs.for_every_variant(env["CPPPATH"] + [includes])
-                self.arg_dict["cppdefines"] += ModuleConfigs.for_every_variant(env["CPPDEFINES"] + defines)
+                self.arg_dict["cppdefines"] += ModuleConfigs.for_every_variant(list(env["CPPDEFINES"]) + defines)
                 self.arg_dict["cmdargs"] += ModuleConfigs.for_every_variant(cli_args)
 
             def build_commandline(self, commands):
@@ -873,7 +873,7 @@ def generate_vs_project(env, num_jobs):
             env["MSVS"]["PROJECTSUFFIX"] = ".vcxproj"
             env["MSVS"]["SOLUTIONSUFFIX"] = ".sln"
         env.MSVSProject(
-            target=["#godot" + env["MSVSPROJECTSUFFIX"]],
+            target=["#" + project_name + env["MSVSPROJECTSUFFIX"]],
             incs=env.vs_incs,
             srcs=env.vs_srcs,
             auto_build_solution=1,

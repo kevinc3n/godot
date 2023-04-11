@@ -86,6 +86,10 @@ static Ref<ImageTexture> generate_icon(int p_index) {
 	ImageLoaderSVG img_loader;
 	Error err = img_loader.create_image_from_string(img, default_theme_icons_sources[p_index], scale, upsample, HashMap<Color, Color>());
 	ERR_FAIL_COND_V_MSG(err != OK, Ref<ImageTexture>(), "Failed generating icon, unsupported or invalid SVG data in default theme.");
+#else
+	// If the SVG module is disabled, we can't really display the UI well, but at least we won't crash.
+	// 16 pixels is used as it's the most common base size for Godot icons.
+	img = Image::create_empty(16 * scale, 16 * scale, false, Image::FORMAT_RGBA8);
 #endif
 
 	return ImageTexture::create_from_image(img);
@@ -176,6 +180,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("icon_disabled_color", "Button", Color(1, 1, 1, 0.4));
 
 	theme->set_constant("h_separation", "Button", 2 * scale);
+	theme->set_constant("icon_max_width", "Button", 0);
 
 	// MenuBar
 	theme->set_stylebox("normal", "MenuBar", button_normal);
@@ -684,6 +689,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_constant("separator_outline_size", "PopupMenu", 0);
 	theme->set_constant("item_start_padding", "PopupMenu", 2 * scale);
 	theme->set_constant("item_end_padding", "PopupMenu", 2 * scale);
+	theme->set_constant("icon_max_width", "PopupMenu", 0);
 
 	// GraphNode
 	Ref<StyleBoxFlat> graphnode_normal = make_flat_stylebox(style_normal_color, 18, 42, 18, 12);
@@ -720,7 +726,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_constant("title_offset", "GraphNode", 26 * scale);
 	theme->set_constant("title_h_offset", "GraphNode", 0);
 	theme->set_constant("close_offset", "GraphNode", 22 * scale);
-	theme->set_constant("close_h_offset", "GraphNode", 22 * scale);
+	theme->set_constant("close_h_offset", "GraphNode", 12 * scale);
 	theme->set_constant("port_offset", "GraphNode", 0);
 
 	// Tree
@@ -776,6 +782,13 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_constant("scroll_border", "Tree", 4);
 	theme->set_constant("scroll_speed", "Tree", 12);
 	theme->set_constant("outline_size", "Tree", 0);
+	theme->set_constant("icon_max_width", "Tree", 0);
+	theme->set_constant("scrollbar_margin_left", "Tree", -1);
+	theme->set_constant("scrollbar_margin_top", "Tree", -1);
+	theme->set_constant("scrollbar_margin_right", "Tree", -1);
+	theme->set_constant("scrollbar_margin_bottom", "Tree", -1);
+	theme->set_constant("scrollbar_h_separation", "Tree", 4 * scale);
+	theme->set_constant("scrollbar_v_separation", "Tree", 4 * scale);
 
 	// ItemList
 
@@ -838,6 +851,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 
 	theme->set_constant("side_margin", "TabContainer", 8 * scale);
 	theme->set_constant("icon_separation", "TabContainer", 4 * scale);
+	theme->set_constant("icon_max_width", "TabContainer", 0);
 	theme->set_constant("outline_size", "TabContainer", 0);
 
 	// TabBar
@@ -865,6 +879,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("drop_mark_color", "TabBar", Color(1, 1, 1));
 
 	theme->set_constant("h_separation", "TabBar", 4 * scale);
+	theme->set_constant("icon_max_width", "TabBar", 0);
 	theme->set_constant("outline_size", "TabBar", 0);
 
 	// Separators
